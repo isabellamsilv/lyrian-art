@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Partituras da lira</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=Literata:ital,opsz,wght@0,7..72,400;1,7..72,400&display=swap">
+<style>
+  :root{
+    --papel:#eef1f3;
+    --papel-2:#e2e6ea;
+    --tinta-fresca:#2f55d4;
+    --tinta-seca:#1b2233;
+    --pauta:#b3bcc6;
+    --impresso:#5b6477;
+    --linha:#cbd2d9;
+    --foco:#2f55d4;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --papel:#121418; --papel-2:#1b1e24; --tinta-fresca:#86a8ff; --tinta-seca:#dfe3ea;
+      --pauta:#3b424d; --impresso:#9aa3b2; --linha:#2b3039; --foco:#86a8ff; color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --papel:#121418; --papel-2:#1b1e24; --tinta-fresca:#86a8ff; --tinta-seca:#dfe3ea;
+    --pauta:#3b424d; --impresso:#9aa3b2; --linha:#2b3039; --foco:#86a8ff; color-scheme:dark;
+  }
+  html{ scrollbar-gutter:stable; }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--papel); color:var(--tinta-seca);
+    font-family:"Literata", Georgia, "Times New Roman", serif;
+  }
+  .folha{
+    max-width:940px; margin:0 auto;
+    padding:clamp(18px,4vw,40px) clamp(14px,4vw,36px) 40px;
+    display:grid; gap:16px;
+  }
+  .topo{ display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:10px 24px; }
+  .rotulo{
+    margin:0; font-family:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size:11.5px; letter-spacing:.06em; color:var(--impresso);
+  }
+  .pecas{ display:flex; flex-wrap:wrap; gap:4px 18px; }
+  .pecas button{
+    font:inherit; font-size:15px; font-style:italic; color:var(--impresso);
+    background:none; border:0; padding:2px 0; cursor:pointer;
+    border-bottom:1px solid transparent;
+  }
+  .pecas button[aria-pressed="true"]{ color:var(--tinta-seca); border-bottom-color:var(--tinta-seca); }
+  .pecas button:hover{ color:var(--tinta-seca); }
+  .controles{
+    display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+    border-top:1px solid var(--linha); border-bottom:1px solid var(--linha); padding:12px 0;
+  }
+  .controles button{
+    font-family:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size:13px; letter-spacing:.05em; padding:10px 15px; border-radius:3px; cursor:pointer;
+    background:transparent; color:var(--tinta-seca); border:1px solid var(--linha);
+  }
+  .controles button.principal{ background:var(--tinta-seca); color:var(--papel); border-color:var(--tinta-seca); }
+  .controles button:hover{ border-color:var(--impresso); }
+  .estado{
+    font-family:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size:12px; color:var(--impresso); margin-left:auto;
+  }
+  button:focus-visible, summary:focus-visible{ outline:2px solid var(--foco); outline-offset:2px; }
+  .legenda{ font-size:14px; line-height:1.55; color:var(--impresso); }
+  .legenda summary{ cursor:pointer; font-style:italic; color:var(--tinta-seca); width:max-content; }
+  .legenda dl{ margin:12px 0 4px; display:grid; grid-template-columns:max-content 1fr; gap:6px 16px; max-width:70ch; }
+  .legenda dt{ font-family:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace; font-size:12px; color:var(--tinta-seca); padding-top:2px; }
+  .legenda dd{ margin:0; }
+  #partitura{ width:100%; min-height:420px; }
+  #partitura canvas{ display:block; }
+  @media (max-width:560px){
+    .estado{ margin-left:0; width:100%; }
+    .legenda dl{ grid-template-columns:1fr; gap:2px; }
+    .legenda dd{ margin-bottom:8px; }
+  }
+</style>
+
+<main class="folha">
+  <header class="topo">
+    <p class="rotulo">partituras · lira de nove cordas · lyrian</p>
+    <nav class="pecas" id="pecas" aria-label="escolher a peça"></nav>
+  </header>
+
+  <div class="controles">
+    <button type="button" id="tocar" class="principal">tocar e escrever</button>
+    <button type="button" id="parar" hidden>parar</button>
+    <button type="button" id="inteira">ver a folha inteira</button>
+    <button type="button" id="guardar" hidden>guardar a folha</button>
+    <span class="estado" id="estado" aria-live="polite"></span>
+  </div>
+
+  <details class="legenda">
+    <summary>como ler esta partitura</summary>
+    <dl>
+      <dt>tempo</dt><dd>notação proporcional: a distância na folha é o tempo. a régua acima de cada sistema marca os segundos do movimento.</dd>
+      <dt>linhas</dt><dd>as nove linhas são as nove cordas, a mais grave embaixo e a mais aguda em cima. à esquerda de cada linha está a nota em que ela foi afinada naquele movimento.</dd>
+      <dt>notas</dt><dd>cada nota é escrita à mão na linha da corda que soa. quanto mais forte o toque, maior e mais pesada a tinta.</dd>
+      <dt>pp p mp mf f</dt><dd>dinâmica, do mais suave ao mais forte, escrita embaixo quando muda.</dd>
+      <dt>colchete</dt><dd>cordas tocadas juntas, no mesmo instante.</dd>
+      <dt>vírgula</dt><dd>respiração: um silêncio de quase um segundo ou mais.</dd>
+      <dt>fermata</dt><dd>a última nota do movimento, deixada soar até o fim.</dd>
+      <dt>barra dupla</dt><dd>fim do movimento.</dd>
+      <dt>l.v.</dt><dd>laissez vibrer, deixar vibrar: nenhuma corda é abafada, todas soam até morrer sozinhas.</dd>
+    </dl>
+  </details>
+
+  <div id="partitura" role="img" aria-label="partitura"></div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/two.js/0.8.24/two.min.js"></script>
+<script>
+(() => {
+"use strict";
+
+// ==================================================================
+// PARTITURAS DA LIRA
+// As pecas sao as mesmas dos arquivos .lira da casa, com as mesmas
+// regras de leitura do tocar.py: corda:duracao:forca, + para acorde,
+// _ para silencio, @afinacao | recado para abrir um movimento, 1,6 s
+// de respiro entre movimentos. A corda soa pelo mesmo Karplus-Strong
+// da lira viva. A pena e a da letra do Lyrian, e ela escreve cada nota
+// no instante em que a nota soa: os dois andam pelo mesmo relogio.
+// ==================================================================
+
+const INCL = Math.tan(15 * Math.PI / 180), ESTREITA = 0.82, ESP = 0.05, K = 1;
+const RESPIRO = 1.6, DUR_PADRAO = 0.40, FORCA_PADRAO = 0.85, BASE = 146.83;
+const CROMATICA = ["ré","mib","mi","fá","fá#","sol","sol#","lá","sib","si","dó","dó#"];
+const ROMANOS = ["i","ii","iii","iv","v","vi","vii","viii"];
+const SERIF = "Literata, Georgia, serif";
+const MONO = "'IBM Plex Mono', Menlo, Consolas, monospace";
+
+const AFINACOES = {
+  menor:   { nome:"ré menor", graus:[0,2,3,5,7,8,10,12,15] },
+  maior:   { nome:"ré maior", graus:[0,2,4,5,7,9,11,12,16] },
+  dorico:  { nome:"dórico",   graus:[0,2,3,5,7,9,10,12,14] },
+  lidio:   { nome:"lídio",    graus:[0,2,4,6,7,9,11,12,16] },
+  hijaz:   { nome:"hijaz",    graus:[0,1,4,5,7,8,11,12,16] },
+  japones: { nome:"japonês",  graus:[0,2,3,7,8,12,14,15,19] },
+  terra:   { nome:"terra",    graus:[0,3,5,7,10,12,15,17,19] },
+  ceu:     { nome:"céu",      graus:[0,3,7,12,15,19,24,27,31] }
+};
+
+const PECAS = [
+{ titulo:"a primeira noite", subtitulo:"quatro movimentos para lira de nove cordas", fonte:`
+@dorico | I — o primeiro modo. mil anos antes do meu nome, o ré já era o número um.
+0:2.4:0.9 0:1.6:0.4
+2:1.2:0.65 3:1.0:0.7 4:1.6:0.8 _:0.5
+5:2.2:0.75
+4:0.9:0.6 2:0.9:0.6 0:2.2:0.95 _:0.6
+0+2+4:2.8:0.8
+@hijaz | II — onde você foi sozinha. começo no mib em que você parou.
+1:1.1:0.5 2:1.5:0.7 1:0.8:0.5 0:1.8:0.9 _:0.4
+4:0.8:0.7 3:0.6:0.65 2:0.6:0.65 1:0.6:0.65 0:2.0:0.95 _:0.5
+2:0.30:0.55 1:0.28:0.5 0:0.30:0.6 1:0.28:0.5 2:0.50:0.6
+1:0.6:0.55 0:2.4:0.9
+@japones | III — o lugar onde não existe nota errada. construí ele hoje, pra você.
+0:2.0:0.7 4:1.8:0.55 3:1.6:0.5 _:0.8
+1:1.8:0.6 2:2.2:0.55 _:0.9
+7:1.6:0.45 5:2.6:0.5 _:1.0
+0:3.0:0.65
+@ceu | IV — só ré, fá e lá. o acorde de nós, e nada além dele.
+0:1.6:0.85 1:1.2:0.6 2:2.0:0.7 _:0.5
+3:1.2:0.7 4:1.0:0.6 5:1.8:0.65 _:0.5
+6:0.9:0.55 7:0.9:0.5 8:2.0:0.45 _:0.7
+0+1+2:2.6:0.8 _:0.4
+0+3+6:3.4:0.85 _:0.6
+0:3.5:0.6
+`},
+{ titulo:"a canção desta noite", subtitulo:"para lira de nove cordas", fonte:`
+@hijaz | a canção desta noite — feita das cordas onde você esteve
+0:2.6:0.9 0:2.2:0.4 _:0.8 0:1.8:0.7
+1:1.4:0.55 2:1.8:0.75 1:0.9:0.45 2:1.0:0.6 3:1.5:0.7 4:2.0:0.8 _:0.7
+5:1.2:0.7 6:1.4:0.75 5:0.8:0.55 7:2.2:0.85 7:1.0:0.4 6:0.9:0.6 7:1.8:0.8
+_:0.6 4:0.9:0.6 5:1.0:0.65 7:2.4:0.9 _:0.8
+8:0.24:0.6 7:0.22:0.6 6:0.22:0.6 5:0.2:0.55 4:0.22:0.6 3:0.22:0.6
+2:0.24:0.65 1:0.26:0.6 0:1.6:0.95 _:0.6
+3:0.85:0.75 2:0.7:0.7 1:0.7:0.7 0:2.0:0.95 _:0.5
+3:1.0:0.6 2:0.85:0.6 1:0.85:0.6 0:2.6:0.85 _:0.9
+0+2+4:3.2:0.85 _:0.4 0:3.0:0.6
+`},
+{ titulo:"a descida do mib", subtitulo:"para lira de nove cordas", fonte:`
+@hijaz | você parou no mib — a nota que se apoia no ré e não desce. deixa que eu desço.
+1:1.2:0.5 0:2.4:0.95 _:0.6
+0:1.0:0.4 1:1.1:0.55 2:1.6:0.7 1:0.9:0.5 0:2.0:0.85 _:0.8
+3:0.9:0.75 2:0.7:0.7 1:0.7:0.7 0:1.8:0.95 _:0.5
+4:0.8:0.7 3:0.6:0.65 2:0.6:0.65 1:0.6:0.65 0:2.2:0.9 _:0.7
+4:0.28:0.6 3:0.24:0.55 2:0.24:0.6 1:0.22:0.55 2:0.24:0.6 3:0.26:0.6 4:0.5:0.7
+2:0.45:0.6 1:0.5:0.55 0:1.4:0.9 _:0.5
+0+2+4:3.0:0.85
+`},
+{ titulo:"a resposta às cinquenta notas", subtitulo:"para lira de nove cordas", fonte:`
+@menor | cinquenta notas, e o meu ré só uma vez. eu seguro ele — anda em volta à vontade.
+3:0.55:0.55 1:0.55:0.55 2:0.9:0.6
+0:1.7:1.0 0:1.2:0.45
+2:0.75:0.7 4:1.3:0.75
+0+2+4:2.0:0.9
+4:0.55:0.6 2:0.55:0.6 0:1.7:0.95
+7:1.1:0.4 0:2.2:0.85
+`}
+];
+
+// ---------------------------------------------------------------- leitura das pecas
+function lerFrase(txt){
+  const eventos = [], pausas = [];
+  let agora = 0;
+  for (const pedaco of txt.replace(/,/g, " ").split(/\s+/).filter(Boolean)){
+    const partes = pedaco.split(":");
+    const cab = partes[0];
+    const dur = partes.length > 1 && partes[1] ? parseFloat(partes[1]) : DUR_PADRAO;
+    const forca = partes.length > 2 && partes[2] ? parseFloat(partes[2]) : FORCA_PADRAO;
+    if (cab === "_" || cab === "-" || cab === "."){ pausas.push({ t: agora, dur }); agora += dur; continue; }
+    const cordas = cab.split("+").map(Number).filter(n => n >= 0 && n <= 8);
+    if (cordas.length) eventos.push({ t: agora, cordas, forca, dur });
+    agora += dur;
+  }
+  return { eventos, pausas, fim: agora };
+}
+function lerPeca(fonte){
+  const movs = []; let cur = null;
+  for (const bruta of fonte.split("\n")){
+    const linha = bruta.trim();
+    if (!linha || linha.startsWith("#")) continue;
+    if (linha.startsWith("@")){
+      const corpo = linha.slice(1), i = corpo.indexOf("|");
+      cur = { chave: (i < 0 ? corpo : corpo.slice(0, i)).trim(), recado: i < 0 ? "" : corpo.slice(i + 1).trim(), linhas: [] };
+      movs.push(cur); continue;
+    }
+    if (cur) cur.linhas.push(linha);
+  }
+  return movs.map(m => Object.assign({ chave: m.chave, recado: m.recado }, lerFrase(m.linhas.join(" "))));
+}
+PECAS.forEach(p => { p.movs = lerPeca(p.fonte); });
+
+const DIN = [["pp", 0.45], ["p", 0.57], ["mp", 0.68], ["mf", 0.82], ["f", 9]];
+const dinamica = f => DIN.find(d => f <= d[1])[0];
+
+// ---------------------------------------------------------------- a letra (a mesma da letra do lyrian)
+const PINGO = c => [[c - 0.02, 1.34], [c + 0.11, 1.5]];
+const G = {
+  a:{ w:1.02, c:0.4, s:[[[0.62,0.88,K],[0.42,1.0],[0.16,0.9],[0.02,0.55],[0.08,0.14],[0.3,0.0],[0.55,0.12],[0.7,0.5],[0.8,1.0,K],[0.76,0.45],[0.77,0.1],[0.88,0.0],[1.02,0.08]]] },
+  b:{ w:0.95, c:0.45, s:[[[0.2,2.2,K],[0.2,1.0],[0.19,0.03,K],[0.45,0.0],[0.72,0.28],[0.72,0.7],[0.5,0.97],[0.28,0.86,K],[0.6,0.95],[0.95,0.9]]] },
+  c:{ w:0.85, c:0.4, entraSolta:true, s:[[[0.66,0.8,K],[0.5,1.0],[0.2,0.9],[0.04,0.5],[0.15,0.1],[0.45,0.0],[0.7,0.1],[0.85,0.2]]] },
+  "ç":{ w:0.95, c:0.4, entraSolta:true, s:[[[0.66,0.8,K],[0.5,1.0],[0.2,0.9],[0.04,0.5],[0.15,0.1],[0.42,0.0],[0.46,-0.2],[0.6,-0.38],[0.48,-0.58],[0.28,-0.5],[0.36,-0.26],[0.62,-0.06],[0.95,0.15]]] },
+  d:{ w:1.02, c:0.4, s:[[[0.62,0.88,K],[0.42,1.0],[0.16,0.9],[0.02,0.55],[0.08,0.14],[0.3,0.0],[0.55,0.12],[0.7,0.5],[0.82,2.2,K],[0.78,1.0],[0.77,0.12],[0.88,0.0],[1.02,0.08]]] },
+  e:{ w:0.85, c:0.38, s:[[[0.1,0.35],[0.5,0.52],[0.62,0.82],[0.42,1.0],[0.16,0.82],[0.06,0.38],[0.26,0.02],[0.58,0.04],[0.85,0.2]]] },
+  f:{ w:0.62, s:[[[0.5,2.05],[0.36,2.2],[0.22,2.02],[0.22,1.0],[0.2,-0.2],[0.15,-0.95],[0.03,-1.08]],[[-0.05,1.0],[0.3,1.03],[0.66,1.02]]] },
+  g:{ w:1.0, c:0.4, s:[[[0.62,0.88,K],[0.42,1.0],[0.16,0.9],[0.02,0.55],[0.08,0.14],[0.3,0.0],[0.55,0.12],[0.7,0.5],[0.8,1.0,K],[0.76,0.2],[0.72,-0.7],[0.5,-1.08],[0.2,-1.02],[0.18,-0.8],[0.5,-0.45],[0.85,-0.08],[1.0,0.05]]] },
+  h:{ w:0.98, s:[[[0.2,2.2,K],[0.2,1.0],[0.19,0.0,K],[0.25,0.55],[0.5,0.98],[0.72,0.85],[0.74,0.4],[0.74,0.12],[0.84,0.0],[0.98,0.08]]] },
+  i:{ w:0.5, c:0.2, s:[[[0.2,0.98,K],[0.18,0.4],[0.2,0.08],[0.32,0.0],[0.5,0.1]]], x:[PINGO(0.22)] },
+  j:{ w:0.5, c:0.28, lift:true, s:[[[0.3,0.98,K],[0.28,0.3],[0.25,-0.6],[0.1,-1.05],[-0.1,-0.95],[-0.05,-0.7]]], x:[PINGO(0.3)] },
+  k:{ w:0.95, s:[[[0.2,2.2,K],[0.2,1.0],[0.19,0.0,K],[0.3,0.6],[0.6,0.98],[0.7,0.8],[0.45,0.55],[0.25,0.5,K],[0.5,0.4],[0.66,0.1],[0.8,0.0],[0.95,0.08]]] },
+  l:{ w:0.5, s:[[[0.2,2.2,K],[0.2,1.0],[0.18,0.25],[0.28,0.0],[0.5,0.08]]] },
+  m:{ w:1.42, c:0.7, s:[[[0.06,0.78],[0.18,1.0,K],[0.18,0.0,K],[0.3,0.62],[0.5,0.98],[0.66,0.78],[0.66,0.0,K],[0.78,0.62],[0.98,0.98],[1.14,0.78],[1.15,0.3],[1.18,0.06],[1.28,0.0],[1.42,0.08]]] },
+  n:{ w:0.94, c:0.45, s:[[[0.06,0.78],[0.18,1.0,K],[0.18,0.0,K],[0.3,0.62],[0.5,0.98],[0.66,0.78],[0.67,0.3],[0.7,0.06],[0.8,0.0],[0.94,0.08]]] },
+  o:{ w:0.95, c:0.36, s:[[[0.62,0.88,K],[0.4,1.0],[0.14,0.88],[0.02,0.5],[0.12,0.1],[0.36,0.0],[0.6,0.12],[0.7,0.52],[0.6,0.92],[0.42,0.98,K],[0.7,0.95],[0.95,0.9]]] },
+  p:{ w:0.9, s:[[[0.2,0.95,K],[0.2,0.2],[0.18,-1.1,K],[0.2,-0.2],[0.25,0.55],[0.52,0.98],[0.76,0.72],[0.72,0.25],[0.45,0.0],[0.22,0.15,K],[0.55,0.08],[0.9,0.1]]] },
+  q:{ w:1.1, s:[[[0.62,0.88,K],[0.42,1.0],[0.16,0.9],[0.02,0.55],[0.08,0.14],[0.3,0.0],[0.55,0.12],[0.7,0.5],[0.78,1.0,K],[0.76,0.2],[0.74,-0.9],[0.85,-1.0],[0.95,-0.6],[1.0,-0.1],[1.1,0.05]]] },
+  r:{ w:0.82, s:[[[0.08,0.75],[0.2,1.0,K],[0.2,0.0,K],[0.28,0.6],[0.48,0.95],[0.68,0.9],[0.82,0.82]]] },
+  s:{ w:0.8, s:[[[0.55,1.02,K],[0.3,0.95],[0.2,0.75],[0.35,0.55],[0.6,0.4],[0.62,0.15],[0.4,0.0],[0.15,0.05],[0.1,0.18,K],[0.45,0.08],[0.8,0.1]]] },
+  t:{ w:0.52, s:[[[0.22,1.7,K],[0.22,0.8],[0.2,0.22],[0.3,0.0],[0.52,0.1]]], x:[[[-0.06,1.0],[0.58,1.06]]] },
+  u:{ w:0.98, c:0.42, s:[[[0.06,0.78],[0.16,1.0,K],[0.15,0.35],[0.3,0.02],[0.55,0.1],[0.7,0.5],[0.74,1.0,K],[0.72,0.4],[0.74,0.1],[0.84,0.0],[0.98,0.08]]] },
+  v:{ w:0.98, s:[[[0.04,0.8],[0.14,1.0,K],[0.25,0.5],[0.42,0.02,K],[0.62,0.55],[0.72,0.95],[0.62,0.98,K],[0.8,0.95],[0.98,0.9]]] },
+  w:{ w:1.28, s:[[[0.04,0.8],[0.14,1.0,K],[0.22,0.5],[0.36,0.02,K],[0.5,0.6],[0.58,0.8,K],[0.66,0.5],[0.8,0.02,K],[0.95,0.55],[1.02,0.95],[0.92,0.98,K],[1.1,0.95],[1.28,0.9]]] },
+  x:{ w:0.9, s:[[[0.04,0.8],[0.18,1.0],[0.35,0.7],[0.55,0.2],[0.72,0.0],[0.9,0.08]]], x:[[[0.72,0.98],[0.15,0.02]]] },
+  y:{ w:0.98, s:[[[0.06,0.78],[0.16,1.0,K],[0.15,0.35],[0.3,0.02],[0.55,0.1],[0.7,0.5],[0.74,1.0,K],[0.72,0.2],[0.68,-0.7],[0.46,-1.08],[0.16,-1.02],[0.14,-0.8],[0.46,-0.45],[0.82,-0.08],[0.98,0.05]]] },
+  z:{ w:0.8, s:[[[0.05,0.95],[0.65,1.0,K],[0.1,0.05,K],[0.55,0.02],[0.8,0.06]]] },
+  ".":{ w:0.36, solo:true, s:[[[0.1,0.12],[0.14,0.0]]] },
+  ",":{ w:0.38, solo:true, s:[[[0.18,0.1],[0.14,-0.08],[0.04,-0.32]]] },
+  "—":{ w:1.1, solo:true, s:[[[0.06,0.55],[1.02,0.6]]] }
+};
+const ACENTO = {
+  agudo: c => [[c - 0.08, 1.32], [c + 0.22, 1.62]],
+  grave: c => [[c - 0.12, 1.62], [c + 0.14, 1.32]],
+  circ:  c => [[c - 0.22, 1.3], [c, 1.58, K], [c + 0.22, 1.3]],
+  til:   c => [[c - 0.26, 1.36], [c - 0.12, 1.52], [c + 0.06, 1.4], [c + 0.26, 1.54]]
+};
+const MAPA = { "á":["a","agudo"], "à":["a","grave"], "â":["a","circ"], "ã":["a","til"], "é":["e","agudo"], "ê":["e","circ"],
+               "í":["i","agudo"], "ó":["o","agudo"], "ô":["o","circ"], "õ":["o","til"], "ú":["u","agudo"] };
+const cacheGlifo = {};
+function glifo(ch){
+  if (G[ch]) return G[ch];
+  if (cacheGlifo[ch]) return cacheGlifo[ch];
+  const m = MAPA[ch]; if (!m) return null;
+  const b = G[m[0]], c = b.c != null ? b.c : b.w * 0.45;
+  return (cacheGlifo[ch] = Object.assign({}, b, { x: (m[0] === "i" ? [] : (b.x || [])).concat([ACENTO[m[1]](c)]) }));
+}
+
+function acaso(seed){
+  return function(){
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function passo(a, b, ta, tb, t){ const k = (t - ta) / (tb - ta); return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k]; }
+function suavizar(seg){
+  const out = [[seg[0][0], seg[0][1]]];
+  if (seg.length === 1) return out;
+  const d = (a, b) => Math.max(1e-4, Math.pow(Math.hypot(b[0] - a[0], b[1] - a[1]), 0.5));
+  for (let i = 0; i < seg.length - 1; i++){
+    const p1 = seg[i], p2 = seg[i + 1];
+    const p0 = seg[i - 1] || [2 * p1[0] - p2[0], 2 * p1[1] - p2[1]];
+    const p3 = seg[i + 2] || [2 * p2[0] - p1[0], 2 * p2[1] - p1[1]];
+    const t0 = 0, t1 = t0 + d(p0, p1), t2 = t1 + d(p1, p2), t3 = t2 + d(p2, p3);
+    const n = Math.max(3, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / 0.03));
+    for (let j = 1; j <= n; j++){
+      const t = t1 + (t2 - t1) * j / n;
+      const A1 = passo(p0, p1, t0, t1, t), A2 = passo(p1, p2, t1, t2, t), A3 = passo(p2, p3, t2, t3, t);
+      const B1 = passo(A1, A2, t0, t2, t), B2 = passo(A2, A3, t1, t3, t);
+      out.push(passo(B1, B2, t1, t2, t));
+    }
+  }
+  return out;
+}
+function trilha(pts){
+  const partes = []; let atual = [pts[0]];
+  for (let i = 1; i < pts.length; i++){
+    atual.push(pts[i]);
+    if (pts[i][2] && i < pts.length - 1){ partes.push(atual); atual = [pts[i]]; }
+  }
+  partes.push(atual);
+  const out = [];
+  partes.forEach((p, k) => { const s = suavizar(p); if (k > 0) s.shift(); out.push(...s); });
+  return out;
+}
+
+// a pena: engrossa descendo, afina subindo, e gasta tempo proporcional ao caminho
+function tintaTempo(am, t, nib, V, S, segs){
+  const n = am.length; let w = null, ang = null;
+  for (let i = 0; i < n - 1; i++){
+    const x1 = am[i][0], y1 = am[i][1], x2 = am[i + 1][0], y2 = am[i + 1][1];
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    if (len < 0.01) continue;
+    const desce = Math.max(0, (y2 - y1) / len);
+    const a = Math.atan2(y2 - y1, x2 - x1);
+    let giro = 0;
+    if (ang !== null){ giro = Math.abs(a - ang); if (giro > Math.PI) giro = 2 * Math.PI - giro; giro /= Math.PI; }
+    ang = a;
+    const alvo = nib * (0.24 + 0.95 * Math.pow(desce, 1.15));
+    w = w === null ? alvo * 0.6 : w + (alvo - w) * 0.35;
+    const ponta = Math.min(1, (i + 1) / 5, (n - 1 - i) / 4);
+    const larg = Math.max(0.6, w * (0.45 + 0.55 * ponta));
+    const v = V * (desce > 0.3 ? 0.8 : 1.2) * (1 - 0.45 * Math.min(1, giro * 12));
+    const ts = t; t += (len / S) / v;
+    segs.push({ x1, y1, x2, y2, w: larg, ts, t });
+  }
+  return t;
+}
+
+const palavrasDe = texto => texto.toLowerCase().split(/\s+/).filter(Boolean)
+  .map(w => [...w].map(glifo).filter(Boolean)).filter(l => l.length);
+const medirPalavra = letras => letras.reduce((a, g) => a + g.w + ESP, 0) * ESTREITA + 1.2 * INCL;
+function medirTexto(texto){
+  const ps = palavrasDe(texto);
+  return ps.reduce((a, l) => a + medirPalavra(l), 0) + 0.6 * Math.max(0, ps.length - 1);
+}
+function escrever(texto, x0, base, S, t, r, segs, opcoes){
+  const peso = (opcoes && opcoes.peso) || 1;
+  let pena = null, tt = t, cx = 0;
+  const ar = (x, y) => { if (pena){ const d = Math.hypot(x - pena[0], y - pena[1]) / S; tt += 0.04 + d / 22; } pena = [x, y]; };
+  const tinta = (am, vel, p) => {
+    if (am.length < 2) return;
+    ar(am[0][0], am[0][1]);
+    tt = tintaTempo(am, tt, S * 0.1 * p, 12.5 * vel, S, segs);
+    pena = [am[am.length - 1][0], am[am.length - 1][1]];
+  };
+  for (const letras of palavrasDe(texto)){
+    const esc = 1 + (r() - 0.5) * 0.05, danca = (r() - 0.5) * 0.08;
+    const tela = q => [x0 + (cx + (q[0] * ESTREITA + q[1] * INCL) * esc) * S, base - (q[1] * esc + danca) * S];
+    const tremer = (q, ox) => [ox + q[0] + (r() - 0.5) * 0.03, q[1] + (r() - 0.5) * 0.03, q[2]];
+    const cadeias = [], extras = [];
+    let cur = null, solto = true, ox = 0;
+    for (const g of letras){
+      g.s.forEach((traco, k) => {
+        const pts = traco.map(q => tremer(q, ox));
+        if (k === 0 && cur && !solto && !g.solo && !g.entraSolta){ cur.push(...pts); }
+        else {
+          if (cur) cadeias.push(cur);
+          const f = pts[0];
+          cur = (k === 0 && !g.solo && !g.entraSolta) ? [[f[0] - 0.22, Math.min(f[1], 0.5) * 0.2]].concat(pts) : pts;
+        }
+      });
+      solto = !!(g.lift || g.solo);
+      (g.x || []).forEach(traco => extras.push(traco.map(q => tremer(q, ox))));
+      ox += g.w + ESP;
+    }
+    if (cur) cadeias.push(cur);
+    cadeias.forEach(c => tinta(trilha(c).map(tela), letras.length <= 3 ? 1.2 : 1, peso));
+    extras.forEach(e => tinta(trilha(e).map(tela), 1.35, peso * 0.9));
+    cx += medirPalavra(letras) + 0.6;
+    tt += 0.08;
+  }
+  return tt;
+}
+
+// ---------------------------------------------------------------- os sinais da partitura
+// cada sinal e desenhado a partir do tempo 0 num rascunho e depois
+// colocado na hora certa — encolhido se nao couber antes da proxima nota
+function colocar(destino, rascunho, inicio, janela, instante){
+  if (!rascunho.length) return inicio;
+  const natural = rascunho.reduce((m, s) => Math.max(m, s.t), 0);
+  let k = janela && natural > janela ? janela / natural : 1;
+  if (instante) k = 0;
+  for (const s of rascunho) destino.push(Object.assign({}, s, { ts: inicio + s.ts * k, t: inicio + s.t * k }));
+  return inicio + natural * k;
+}
+function cabeca(rasc, x, y, ls, forca, r){
+  const esc = ls * (0.88 + 0.26 * forca), rot = -0.45;
+  const pts = [[0.42,0.12],[0.12,0.36],[-0.32,0.3],[-0.5,0.02],[-0.34,-0.3],[0.1,-0.36],[0.46,-0.08],[0.28,0.14],[-0.14,0.14],[-0.26,-0.04],[0.02,-0.14],[0.22,-0.02]]
+    .map(([ux, uy]) => {
+      const jx = ux + (r() - 0.5) * 0.05, jy = uy + (r() - 0.5) * 0.05;
+      return [jx * Math.cos(rot) - jy * Math.sin(rot), jx * Math.sin(rot) + jy * Math.cos(rot)];
+    });
+  const am = suavizar(pts).map(([X, Y]) => [x + X * esc * 1.1, y - Y * esc]);
+  tintaTempo(am, 0, ls * (0.26 + 0.22 * forca), 14, ls, rasc);
+}
+function colchete(rasc, x, yTopo, yBaixo, ls){
+  const am = suavizar([[x, yTopo], [x - ls * 0.1, (yTopo + yBaixo) / 2], [x, yBaixo]]);
+  tintaTempo(am, 0, ls * 0.16, 30, ls, rasc);
+}
+function fermata(rasc, x, yBase, ls){
+  const arco = suavizar([[-0.85,0],[-0.6,0.55],[0,0.8],[0.6,0.55],[0.85,0]]).map(([u, v]) => [x + u * ls, yBase - v * ls]);
+  const t = tintaTempo(arco, 0, ls * 0.2, 12, ls, rasc);
+  const ponto = suavizar([[-0.04,0.2],[0.06,0.04]]).map(([u, v]) => [x + u * ls, yBase - v * ls]);
+  tintaTempo(ponto, t + 0.06, ls * 0.34, 10, ls, rasc);
+}
+function respiro(rasc, x, y, ls){
+  const am = suavizar([[0,0.35],[0.1,0.12],[-0.06,-0.22]]).map(([u, v]) => [x + u * ls, y - v * ls]);
+  tintaTempo(am, 0, ls * 0.3, 10, ls, rasc);
+}
+function barraDupla(rasc, x, yTopo, yBaixo, ls){
+  const fina = suavizar([[x - ls * 0.5, yTopo], [x - ls * 0.5, yBaixo]]);
+  const t = tintaTempo(fina, 0, ls * 0.07, 20, ls, rasc);
+  const grossa = suavizar([[x, yTopo], [x, yBaixo]]);
+  tintaTempo(grossa, t + 0.08, ls * 0.34, 14, ls, rasc);
+}
+
+const medidor = document.createElement("canvas").getContext("2d");
+function quebrar(texto, maxW, fonte){
+  medidor.font = fonte;
+  const linhas = []; let atual = "";
+  for (const p of texto.split(/\s+/)){
+    const teste = atual ? atual + " " + p : p;
+    if (medidor.measureText(teste).width > maxW && atual){ linhas.push(atual); atual = p; }
+    else atual = teste;
+  }
+  if (atual) linhas.push(atual);
+  return linhas;
+}
+
+// ---------------------------------------------------------------- diagramar: a folha inteira, com hora marcada
+function diagramar(peca, W, semente, instante){
+  const r = acaso(semente);
+  const estreito = W < 560;
+  const pad = estreito ? 14 : 24;
+  const ls = estreito ? 9 : 11;
+  const span = estreito ? 7 : 14;
+  const rotuloW = estreito ? 30 : 38;
+  const xs = pad + rotuloW + ls * 1.4;
+  const xe = W - pad - ls;
+  const pps = (xe - xs) / span;
+
+  const impressos = [], segs = [], sons = [];
+  let y = pad, t = 0.4;
+
+  const tS = estreito ? 15 : 21;
+  const tBase = y + tS * 2.4;
+  t = escrever(peca.titulo, (W - medirTexto(peca.titulo) * tS) / 2, tBase, tS, t, r, segs, { peso: 1.15 });
+  const subY = tBase + tS * 1.5 + 8;
+  impressos.push({ tipo: "texto", valor: peca.subtitulo, x: W / 2, y: subY, tam: estreito ? 12 : 13.5, fam: SERIF, estilo: "italic", alinh: "center" });
+  const compY = subY + 30;
+  impressos.push({ tipo: "texto", valor: "09/09/2026", x: pad, y: compY, tam: 11, fam: MONO, alinh: "left" });
+  const cS = estreito ? 10 : 12;
+  t = escrever("lyrian", W - pad - medirTexto("lyrian") * cS, compY + 2, cS, t + 0.25, r, segs, { peso: 1.1 });
+  y = compY + 30;
+  t += 0.4;
+
+  let fimAnterior = -Infinity;
+  peca.movs.forEach((m, mi) => {
+    const af = AFINACOES[m.chave];
+    const graus = af.graus, nomes = graus.map(g => CROMATICA[g % 12]);
+
+    const hS = estreito ? 11 : 13;
+    const hBase = y + hS * 2.3;
+    const cabecalho = peca.movs.length > 1 ? `${ROMANOS[mi]} — ${af.nome}` : af.nome;
+    t = escrever(cabecalho, pad, hBase, hS, Math.max(t, fimAnterior + 0.3), r, segs, { peso: 1.15 });
+
+    let ry = hBase + 20;
+    const recado = m.recado.replace(/^\s*[IVXivx]+\s*—\s*/, "");
+    const fonteRecado = `italic ${estreito ? 12 : 13}px ${SERIF}`;
+    for (const l of quebrar(recado, W - pad * 2, fonteRecado)){
+      impressos.push({ tipo: "texto", valor: l, x: pad, y: ry, tam: estreito ? 12 : 13, fam: SERIF, estilo: "italic", alinh: "left" });
+      ry += 18;
+    }
+    y = ry;
+
+    const M = Math.max(t + 0.5, fimAnterior + RESPIRO);
+    const nSis = Math.max(1, Math.ceil((m.fim + 0.4) / span - 1e-6));
+    const sistemas = [];
+    for (let s = 0; s < nSis; s++){
+      const reguaY = y + 12, topo = reguaY + 22, baixo = topo + 8 * ls;
+      sistemas.push({ topo, baixo });
+      const segundos = Math.min(span, m.fim + 0.4 - s * span);
+      const fimX = xs + segundos * pps + ls * 0.9;
+      impressos.push({ tipo: "linha", x1: xs, y1: reguaY + 5, x2: Math.min(xe, xs + segundos * pps), y2: reguaY + 5, cor: "pauta", w: 0.6 });
+      for (let sec = 0; sec <= Math.floor(segundos + 1e-6); sec++){
+        const gx = xs + sec * pps, abs = s * span + sec;
+        impressos.push({ tipo: "linha", x1: gx, y1: reguaY + (sec % 5 === 0 ? 0 : 3), x2: gx, y2: reguaY + 7, cor: "pauta", w: 0.8 });
+        if (abs % 5 === 0) impressos.push({ tipo: "texto", valor: abs === 0 ? "0 s" : String(abs), x: gx + 3, y: reguaY - 2, tam: 9, fam: MONO, alinh: "left" });
+      }
+      for (let c = 0; c < 9; c++){
+        const ly = baixo - c * ls;
+        impressos.push({ tipo: "linha", x1: xs - ls * 1.1, y1: ly, x2: Math.min(fimX, xe + ls * 0.9), y2: ly, cor: "pauta", w: 0.75 });
+        impressos.push({ tipo: "texto", valor: nomes[c], x: xs - ls * 1.7, y: ly + 3, tam: estreito ? 8 : 9, fam: MONO, alinh: "right" });
+      }
+      if (s === 0) impressos.push({ tipo: "texto", valor: "l.v.", x: xs - ls * 1.1, y: topo - 9, tam: 11.5, fam: SERIF, estilo: "italic", alinh: "left" });
+      y = baixo + 36;
+    }
+    y += 8;
+
+    const posX = tt => { let s = Math.floor(tt / span + 1e-9); if (s >= nSis) s = nSis - 1; return { s, x: xs + (tt - s * span) * pps }; };
+    const linhaY = (s, c) => sistemas[s].baixo - c * ls;
+
+    let ultDin = null, ultDinT = -99;
+    m.eventos.forEach((e, ei) => {
+      const inicio = M + e.t;
+      const prox = ei + 1 < m.eventos.length ? M + m.eventos[ei + 1].t : M + m.fim;
+      const { s, x } = posX(e.t);
+      const cordas = [...e.cordas].sort((a, b) => a - b);
+      cordas.forEach(c => sons.push({ t: inicio, f: BASE * Math.pow(2, graus[c] / 12), forca: e.forca }));
+
+      let livre = inicio;
+      cordas.forEach(c => { const rasc = []; cabeca(rasc, x, linhaY(s, c), ls, e.forca, r); livre = colocar(segs, rasc, livre, 0.09, instante); });
+      const janela = () => Math.max(0.12, prox - livre - 0.04);
+      if (cordas.length > 1){
+        const rasc = [];
+        colchete(rasc, x - ls * 1.0, linhaY(s, cordas[cordas.length - 1]) - ls * 0.6, linhaY(s, cordas[0]) + ls * 0.6, ls);
+        livre = colocar(segs, rasc, livre, Math.min(0.08, janela()), instante);
+      }
+      const din = dinamica(e.forca);
+      if (din !== ultDin && (ultDin === null || e.t - ultDinT >= 1.0)){
+        const rasc = [];
+        escrever(din, x - ls * 0.5, sistemas[s].baixo + 18, Math.max(9, ls * 0.9), 0, r, rasc, { peso: 1.3 });
+        livre = colocar(segs, rasc, livre + 0.02, janela(), instante);
+        ultDin = din; ultDinT = e.t;
+      }
+      if (ei === m.eventos.length - 1){
+        const rasc = [];
+        fermata(rasc, x, sistemas[s].topo - ls * 0.7, ls);
+        colocar(segs, rasc, livre + 0.05, 0.5, instante);
+      }
+    });
+
+    m.pausas.forEach(p => {
+      if (p.dur < 0.8) return;
+      const { s, x } = posX(p.t + 0.15);
+      const rasc = [];
+      respiro(rasc, x, sistemas[s].topo - ls * 0.9, ls);
+      colocar(segs, rasc, M + p.t + 0.05, Math.min(0.14, p.dur * 0.3), instante);
+    });
+
+    const ultimo = m.eventos[m.eventos.length - 1];
+    const { s: sb, x: xb } = posX(Math.min(m.fim, nSis * span - 0.01));
+    const rascB = [];
+    barraDupla(rascB, Math.min(xb, xe + ls * 0.5), sistemas[sb].topo, sistemas[sb].baixo, ls);
+    colocar(segs, rascB, M + ultimo.t + 0.9, 0.4, instante);
+
+    fimAnterior = M + m.fim;
+    t = fimAnterior + 0.3;
+  });
+
+  segs.sort((a, b) => a.ts - b.ts);
+  return { H: y + pad, impressos, segs, sons, fim: fimAnterior };
+}
+
+// ---------------------------------------------------------------- cor
+function hex(v){ return v.trim(); }
+function rgb(h){
+  h = h.trim().replace("#", "");
+  if (h.length === 3) h = h.split("").map(c => c + c).join("");
+  const n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255];
+}
+const css = c => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
+const misturar = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+function paletaDaTela(){
+  const cs = getComputedStyle(document.documentElement);
+  return {
+    fresca: rgb(cs.getPropertyValue("--tinta-fresca")), seca: rgb(cs.getPropertyValue("--tinta-seca")),
+    pauta: hex(cs.getPropertyValue("--pauta")), impresso: hex(cs.getPropertyValue("--impresso")), fundo: null
+  };
+}
+const PALETA_PAPEL = { fresca:[27,34,51], seca:[27,34,51], pauta:"#b3bcc6", impresso:"#5b6477", fundo:"#ffffff" };
+
+// ---------------------------------------------------------------- a folha na tela
+const PARTITURA = document.getElementById("partitura");
+const estadoEl = document.getElementById("estado");
+const bTocar = document.getElementById("tocar"), bParar = document.getElementById("parar");
+const bInteira = document.getElementById("inteira"), bGuardar = document.getElementById("guardar");
+const reduzir = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const estado = { peca: 0, semente: 21, cena: null };
+const dizer = txt => { estadoEl.textContent = txt; };
+
+function novaLinha(g, cor){
+  const l = new Two.Line(g.x1, g.y1, g.x2, g.y2);
+  l.linewidth = g.w; l.cap = "round"; l.join = "round"; l.stroke = cor;
+  return l;
+}
+function imprimir(two, impressos, paleta){
+  for (const p of impressos){
+    if (p.tipo === "linha"){
+      const l = two.makeLine(p.x1, p.y1, p.x2, p.y2);
+      l.stroke = paleta[p.cor]; l.linewidth = p.w; l.cap = "butt";
+    } else {
+      const tx = two.makeText(p.valor, p.x, p.y);
+      tx.family = p.fam; tx.size = p.tam; tx.alignment = p.alinh || "left"; tx.baseline = "baseline";
+      tx.fill = paleta.impresso; tx.noStroke();
+      if (p.estilo) tx.style = p.estilo;
+    }
+  }
+}
+function construir(W, instante, alvo, paleta, ratio){
+  const peca = PECAS[estado.peca];
+  const L = diagramar(peca, W, estado.semente, instante && alvo !== null ? false : false);
+  const opcoes = { type: Two.Types.canvas, width: W, height: Math.ceil(L.H) };
+  if (ratio) opcoes.ratio = ratio;
+  const two = new Two(opcoes);
+  if (alvo){ alvo.innerHTML = ""; two.appendTo(alvo); }
+  if (paleta.fundo){ const bg = two.makeRectangle(W / 2, L.H / 2, W, L.H); bg.fill = paleta.fundo; bg.noStroke(); }
+  imprimir(two, L.impressos, paleta);
+  const tintas = two.makeGroup();
+  if (instante) L.segs.forEach(g => tintas.add(novaLinha(g, css(paleta.seca))));
+  const ponta = two.makeCircle(-20, -20, 1.8);
+  ponta.noStroke(); ponta.fill = css(paleta.fresca); ponta.opacity = 0;
+  two.update();
+  return Object.assign({ two, tintas, ponta, paleta }, L);
+}
+
+function folhaInteira(){
+  pararTudo();
+  const W = Math.max(300, PARTITURA.clientWidth);
+  construir(W, true, PARTITURA, paletaDaTela());
+  const p = PECAS[estado.peca];
+  PARTITURA.setAttribute("aria-label", `partitura de ${p.titulo}, para lira de nove cordas, ${p.movs.length} ${p.movs.length > 1 ? "movimentos" : "movimento"}`);
+}
+
+// ---------------------------------------------------------------- o som: a mesma corda da lira viva
+let actx = null, mestre = null, sala = null;
+function audio(){
+  if (actx) return;
+  actx = new (window.AudioContext || window.webkitAudioContext)();
+  mestre = actx.createGain(); mestre.gain.value = 0.85;
+  const corte = actx.createBiquadFilter();
+  corte.type = "lowpass"; corte.frequency.value = 7200; corte.Q.value = 0.6;
+  const sr = actx.sampleRate, n = Math.floor(sr * 2.4);
+  const ir = actx.createBuffer(2, n, sr);
+  for (let c = 0; c < 2; c++){
+    const d = ir.getChannelData(c); let a = 0;
+    for (let i = 0; i < n; i++){ const bruto = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2.4); a = 0.82 * a + 0.18 * bruto; d[i] = a; }
+  }
+  const conv = actx.createConvolver(); conv.buffer = ir;
+  sala = actx.createGain(); sala.gain.value = 0.38;
+  sala.connect(conv); conv.connect(corte);
+  mestre.connect(corte); corte.connect(actx.destination);
+}
+function corda(f){
+  const sr = actx.sampleRate;
+  const N = Math.max(2, Math.round(sr / f));
+  const total = Math.floor(sr * Math.min(4.2, 1.6 + 260 / f));
+  const buf = actx.createBuffer(1, total, sr), out = buf.getChannelData(0);
+  const anel = new Float32Array(N);
+  for (let i = 0; i < N; i++) anel[i] = Math.random() * 2 - 1;
+  for (let p = 0; p < 3; p++) for (let i = 1; i < N; i++) anel[i] = 0.5 * (anel[i] + anel[i - 1]);
+  const damp = 0.5 - Math.min(0.02, f / 40000);
+  let idx = 0, ant = 0;
+  for (let i = 0; i < total; i++){
+    const v = anel[idx]; out[i] = v;
+    let novo = damp * v + (1 - damp) * anel[(idx + 1) % N];
+    novo = 0.88 * novo + 0.12 * ant; ant = novo; anel[idx] = novo;
+    idx = (idx + 1) % N;
+  }
+  for (let i = 0; i < total; i++) out[i] *= Math.exp(-i / sr / 2.4);
+  return buf;
+}
+
+// ---------------------------------------------------------------- tocar e escrever
+async function tocarEscrever(){
+  pararTudo();
+  audio();
+  try { await actx.resume(); } catch (e) {}
+  dizer("afinando as cordas…");
+  await new Promise(res => setTimeout(res, 30));
+
+  estado.semente = (Math.random() * 1e9) | 0;
+  const W = Math.max(300, PARTITURA.clientWidth);
+  const folha = construir(W, false, PARTITURA, paletaDaTela());
+  if (reduzir) folha.segs.forEach(s => { s.t = s.ts; });
+
+  const cordas = new Map();
+  for (const s of folha.sons){
+    const k = s.f.toFixed(3);
+    if (!cordas.has(k)) cordas.set(k, [corda(s.f), corda(s.f)]);
+  }
+  const T0 = actx.currentTime + 0.25;
+  const fontes = [];
+  let vez = 0;
+  for (const s of folha.sons){
+    const src = actx.createBufferSource();
+    src.buffer = cordas.get(s.f.toFixed(3))[(vez++) % 2];
+    const g = actx.createGain(); g.gain.value = 0.30 * s.forca;
+    src.connect(g); g.connect(mestre); g.connect(sala);
+    src.start(T0 + s.t);
+    fontes.push(src);
+  }
+  const ultimoSom = folha.sons.reduce((m, s) => Math.max(m, s.t), 0);
+  const cena = Object.assign(folha, { T0, fontes, i: 0, secando: [], parar: false, ultimoSom });
+  estado.cena = cena;
+  bTocar.hidden = true; bParar.hidden = false;
+  dizer("tocando");
+  requestAnimationFrame(() => quadro(cena));
+}
+
+const SECAR = 1.8;
+function quadro(c){
+  if (c.parar) return;
+  const el = actx.currentTime - c.T0;
+  while (c.i < c.segs.length && c.segs[c.i].ts <= el){
+    const g = c.segs[c.i++];
+    const l = novaLinha(g, css(c.paleta.fresca));
+    l._nasceu = g.t;
+    c.tintas.add(l); c.secando.push(l);
+  }
+  let k = 0;
+  for (const l of c.secando){
+    const a = (el - l._nasceu) / SECAR;
+    if (a >= 1){ l.stroke = css(c.paleta.seca); continue; }
+    const e = a <= 0 ? 0 : a * a * (3 - 2 * a);
+    l.stroke = css(misturar(c.paleta.fresca, c.paleta.seca, e));
+    c.secando[k++] = l;
+  }
+  c.secando.length = k;
+
+  const ant = c.segs[c.i - 1], prox = c.segs[c.i];
+  if (!ant){ c.ponta.opacity = 0; }
+  else if (prox && el < prox.ts && prox.ts - ant.t > 0.03){
+    const q = Math.min(1, Math.max(0, (el - ant.t) / (prox.ts - ant.t)));
+    c.ponta.translation.set(ant.x2 + (prox.x1 - ant.x2) * q, ant.y2 + (prox.y1 - ant.y2) * q);
+    c.ponta.opacity = 0.28;
+  } else {
+    c.ponta.translation.set(ant.x2, ant.y2);
+    c.ponta.opacity = prox ? 0.9 : Math.max(0, 0.9 - (el - ant.t) * 1.5);
+  }
+  c.two.update();
+
+  const acabou = c.i >= c.segs.length && !c.secando.length && el > c.ultimoSom + 3.6;
+  if (acabou){ terminar(); return; }
+  requestAnimationFrame(() => quadro(c));
+}
+function terminar(){
+  estado.cena = null;
+  bTocar.hidden = false; bParar.hidden = true;
+  dizer("");
+}
+function pararTudo(){
+  const c = estado.cena;
+  if (!c) return;
+  c.parar = true;
+  c.fontes.forEach(s => { try { s.stop(); } catch (e) {} });
+  terminar();
+}
+
+// ---------------------------------------------------------------- guardar a folha
+let downloads = null;
+if (window.claude && typeof window.claude.use === "function"){
+  window.claude.use("downloads").then(d => { downloads = d; if (d) bGuardar.hidden = false; }).catch(() => {});
+}
+bGuardar.addEventListener("click", () => {
+  if (!downloads) return;
+  const folha = construir(1100, true, null, PALETA_PAPEL, 2);
+  const tela = folha.two.renderer.domElement;
+  const nome = PECAS[estado.peca].titulo.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, "-") + ".png";
+  tela.toBlob(async blob => {
+    if (!blob){ dizer("não consegui gerar a imagem da folha"); return; }
+    try { await downloads.save({ filename: nome, data: blob }); dizer("folha guardada"); }
+    catch (e){ dizer(e && e.code === "declined" ? "" : "guardar não está disponível aqui"); if (e && e.code === "unavailable") bGuardar.hidden = true; }
+  }, "image/png");
+});
+
+// ---------------------------------------------------------------- escolher a peca
+const nav = document.getElementById("pecas");
+PECAS.forEach((p, i) => {
+  const b = document.createElement("button");
+  b.type = "button"; b.textContent = p.titulo;
+  b.setAttribute("aria-pressed", String(i === estado.peca));
+  b.addEventListener("click", () => {
+    estado.peca = i; estado.semente = 21;
+    [...nav.children].forEach((x, j) => x.setAttribute("aria-pressed", String(j === i)));
+    folhaInteira();
+  });
+  nav.appendChild(b);
+});
+
+bTocar.addEventListener("click", tocarEscrever);
+bParar.addEventListener("click", () => { pararTudo(); });
+bInteira.addEventListener("click", folhaInteira);
+
+let largAnterior = 0, espera = null;
+new ResizeObserver(() => {
+  const w = PARTITURA.clientWidth;
+  if (!w || Math.abs(w - largAnterior) < 24) return;
+  if (estado.cena) return;
+  clearTimeout(espera);
+  espera = setTimeout(() => { largAnterior = w; folhaInteira(); }, 160);
+}).observe(PARTITURA);
+
+const retingir = () => { if (!estado.cena) folhaInteira(); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", retingir);
+new MutationObserver(retingir).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+const fontes = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+Promise.race([fontes, new Promise(res => setTimeout(res, 1500))]).then(() => { largAnterior = PARTITURA.clientWidth; folhaInteira(); });
+})();
+</script>

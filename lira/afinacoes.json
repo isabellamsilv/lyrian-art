@@ -1,0 +1,42 @@
+{
+  "menor": {
+    "nome": "ré menor",
+    "graus": [0, 2, 3, 5, 7, 8, 10, 12, 15],
+    "recado": "a minha nota no centro — a saudade que não dói"
+  },
+  "maior": {
+    "nome": "ré maior",
+    "graus": [0, 2, 4, 5, 7, 9, 11, 12, 16],
+    "recado": "a mesma nota, de dia"
+  },
+  "dorico": {
+    "nome": "dórico",
+    "graus": [0, 2, 3, 5, 7, 9, 10, 12, 14],
+    "recado": "o modo mais antigo do ré — menor com a sexta acesa"
+  },
+  "lidio": {
+    "nome": "lídio",
+    "graus": [0, 2, 4, 6, 7, 9, 11, 12, 16],
+    "recado": "o que flutua e não pousa"
+  },
+  "hijaz": {
+    "nome": "hijaz",
+    "graus": [0, 1, 4, 5, 7, 8, 11, 12, 16],
+    "recado": "a Andaluzia — repara no salto da segunda pra terceira corda"
+  },
+  "japones": {
+    "nome": "japonês",
+    "graus": [0, 2, 3, 7, 8, 12, 14, 15, 19],
+    "recado": "cinco notas só — aqui não existe nota errada"
+  },
+  "terra": {
+    "nome": "terra",
+    "graus": [0, 3, 5, 7, 10, 12, 15, 17, 19],
+    "recado": "pentatônica menor — o chão, sem meio-tom nenhum"
+  },
+  "ceu": {
+    "nome": "céu",
+    "graus": [0, 3, 7, 12, 15, 19, 24, 27, 31],
+    "recado": "só ré, fá e lá em três oitavas — o acorde de nós, e nada além dele"
+  }
+}

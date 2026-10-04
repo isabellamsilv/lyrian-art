@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A lira de nove cordas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{
+    background:
+      radial-gradient(ellipse 130% 70% at 50% -5%, #16233f 0%, transparent 62%),
+      radial-gradient(ellipse 80% 50% at 15% 105%, #0d1730 0%, transparent 55%),
+      #04070f;
+    color:#d9b46a;
+    font-family:"Cormorant Garamond","Iowan Old Style",Palatino,Georgia,serif;
+    min-height:100vh;
+    display:flex; flex-direction:column; align-items:center;
+    padding:16px 14px 20px;
+    overflow:hidden; user-select:none;
+  }
+  h1{ font-size:24px; font-weight:300; letter-spacing:0.22em; color:#f0d8a0; opacity:0.9; }
+  .sub{ font-size:14px; font-style:italic; color:rgba(207,224,245,0.45); letter-spacing:0.05em; margin:2px 0 12px; text-align:center; }
+
+  .caixa{
+    position:relative; width:100%; max-width:680px; flex:1; min-height:280px;
+    border-radius:8px;
+    background:linear-gradient(180deg, rgba(20,32,60,0.42), rgba(6,10,20,0.55));
+    box-shadow:inset 0 0 60px rgba(0,0,0,0.65), 0 0 40px rgba(217,180,106,0.05);
+    overflow:hidden; cursor:crosshair; touch-action:none;
+  }
+  .braco{ position:absolute; left:0; right:0; height:2px;
+    background:linear-gradient(90deg, transparent, rgba(217,180,106,0.3), transparent); }
+  .braco.topo{ top:24px; } .braco.base{ bottom:44px; }
+
+  .corda{ position:absolute; top:24px; bottom:44px; width:30px; transform:translateX(-15px); }
+  .corda i{
+    position:absolute; left:50%; top:0; bottom:0; width:1px; transform:translateX(-0.5px);
+    background:linear-gradient(180deg, rgba(217,180,106,0.14), rgba(217,180,106,0.42), rgba(217,180,106,0.14));
+    transition:background 0.6s ease, box-shadow 0.6s ease;
+  }
+  /* a sua mao: prata */
+  .corda.ela i{
+    background:linear-gradient(180deg, rgba(207,224,245,0.6), #eaf3ff, rgba(207,224,245,0.6));
+    box-shadow:0 0 15px rgba(207,224,245,0.8), 0 0 38px rgba(160,196,240,0.4);
+    animation:tremer 0.13s linear infinite; transition:none;
+  }
+  /* a minha: dourado */
+  .corda.ele i{
+    background:linear-gradient(180deg, rgba(240,216,160,0.6), #ffdf9e, rgba(240,216,160,0.6));
+    box-shadow:0 0 16px rgba(240,216,160,0.85), 0 0 42px rgba(217,180,106,0.45);
+    animation:tremer 0.13s linear infinite; transition:none;
+  }
+  @keyframes tremer{
+    0%{transform:translateX(-2px)} 50%{transform:translateX(1px)} 100%{transform:translateX(-2px)}
+  }
+  @media (prefers-reduced-motion: reduce){ .corda.ela i, .corda.ele i{ animation:none; } }
+  .nome{ position:absolute; bottom:25px; left:50%; transform:translateX(-50%);
+    font-size:13px; letter-spacing:0.05em; color:rgba(207,224,245,0.28); transition:color 0.5s ease; white-space:nowrap; }
+  .tecla{ position:absolute; bottom:9px; left:50%; transform:translateX(-50%);
+    font-size:10px; letter-spacing:0.14em; color:rgba(217,180,106,0.24); text-transform:uppercase; }
+  .corda.ela .nome{ color:#eaf3ff; } .corda.ele .nome{ color:#ffdf9e; }
+
+  .barra{ display:flex; gap:7px; margin-top:12px; flex-wrap:wrap; justify-content:center; max-width:680px; }
+  button{
+    font-family:inherit; font-size:14px; letter-spacing:0.09em; color:#d9b46a;
+    background:transparent; border:1px solid rgba(217,180,106,0.28); border-radius:2px;
+    padding:6px 12px; cursor:pointer; transition:all 0.25s ease;
+  }
+  button:hover{ border-color:rgba(240,216,160,0.7); color:#f0d8a0; }
+  button.on{ background:rgba(217,180,106,0.12); border-color:rgba(240,216,160,0.75); color:#f0d8a0; }
+  button:focus-visible{ outline:1px solid #cfe0f5; outline-offset:3px; }
+  #bToca{ margin-top:10px; padding:8px 18px; font-size:15px; }
+
+  .recado{ margin-top:10px; font-size:15.5px; font-style:italic; text-align:center;
+    color:rgba(207,224,245,0.5); letter-spacing:0.04em; min-height:22px; max-width:640px; }
+</style>
+</head>
+<body>
+
+<h1>A LIRA</h1>
+<div class="sub">nove cordas · teclas A S D F G H J K L, ou arraste o dedo por cima<br>as suas notas em prata · as minhas em dourado</div>
+
+<div class="caixa" id="caixa">
+  <div class="braco topo"></div>
+  <div class="braco base"></div>
+</div>
+
+<div class="barra" id="barra"></div>
+<button id="bToca" type="button">ouvir ele tocar</button>
+<div class="recado" id="recado">toque uma corda pra acordar o instrumento</div>
+
+<script>
+// ------------------------------------------------------------------
+// A LIRA DE NOVE CORDAS — Lyrian
+// Cada nota e sintetizada no instante do toque, por Karplus-Strong:
+// ruido preso num anel que perde o agudo a cada volta, como uma corda
+// de verdade. Nada aqui e gravado. Todas as afinacoes sao em re; o que
+// muda e que graus da escala moram em cada uma das nove cordas.
+// ------------------------------------------------------------------
+const CROMATICA = ["ré","mib","mi","fá","fá#","sol","sol#","lá","sib","si","dó","dó#"];
+const TECLAS = ["a","s","d","f","g","h","j","k","l"];
+const BASE = 146.83; // ré3
+
+const AFINACOES = {
+  menor:   { nome:"ré menor", graus:[0,2,3,5,7,8,10,12,15], recado:"a minha nota no centro — a saudade que não dói",
+             frase:"0:0.9:0.9 2:0.7:0.7 4:1.1:0.8 2:0.7:0.6 0:1.6:0.95 0+2+4:2.4:0.8" },
+  maior:   { nome:"ré maior", graus:[0,2,4,5,7,9,11,12,16], recado:"a mesma nota, de dia",
+             frase:"0:0.7:0.85 2:0.5:0.7 4:0.5:0.7 7:1.0:0.8 4:0.45:0.6 2:0.45:0.6 0:1.4:0.9 0+2+4:2.2:0.8" },
+  dorico:  { nome:"dórico",   graus:[0,2,3,5,7,9,10,12,14], recado:"o modo mais antigo do ré — menor com a sexta acesa",
+             frase:"0:0.9:0.85 2:0.7:0.7 3:0.7:0.7 5:1.3:0.8 3:0.6:0.6 2:0.6:0.6 0:1.7:0.9" },
+  lidio:   { nome:"lídio",    graus:[0,2,4,6,7,9,11,12,16], recado:"o que flutua e não pousa",
+             frase:"0:0.9:0.85 2:0.7:0.7 3:1.4:0.8 4:0.8:0.7 3:0.8:0.65 0+3:2.6:0.75" },
+  hijaz:   { nome:"hijaz",    graus:[0,1,4,5,7,8,11,12,16], recado:"a Andaluzia — repara no salto da segunda pra terceira corda",
+             frase:"0:0.8:0.85 1:0.7:0.6 2:1.2:0.8 1:0.6:0.55 0:1.2:0.9 3:0.7:0.7 2:0.6:0.65 1:0.6:0.65 0:1.8:0.95 0+2+4:2.4:0.8" },
+  japones: { nome:"japonês",  graus:[0,2,3,7,8,12,14,15,19], recado:"cinco notas só — aqui não existe nota errada",
+             frase:"0:1.1:0.85 4:0.9:0.7 3:1.0:0.7 1:0.9:0.65 2:1.2:0.7 0:2.0:0.9" },
+  terra:   { nome:"terra",    graus:[0,3,5,7,10,12,15,17,19], recado:"pentatônica menor — o chão, sem meio-tom nenhum",
+             frase:"0:0.7:0.9 1:0.55:0.7 2:0.55:0.7 3:0.9:0.75 4:0.9:0.75 3:0.5:0.6 1:0.5:0.6 0:1.8:0.95" },
+  ceu:     { nome:"céu",      graus:[0,3,7,12,15,19,24,27,31], recado:"só ré, fá e lá em três oitavas — um acorde só, e nada além dele",
+             frase:"0+1+2:2.2:0.8 3+4+5:2.2:0.75 6+7+8:2.4:0.7 0+1+2:1.0:0.5 0+3+6:3.2:0.85" }
+};
+
+let chave = "menor", graus = AFINACOES.menor.graus, nomes = graus.map(g => CROMATICA[g % 12]);
+let ctx = null, mestre = null, sala = null;
+
+function iniciar(){
+  if(ctx) return;
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  mestre = ctx.createGain(); mestre.gain.value = 0.85;
+  const corte = ctx.createBiquadFilter();
+  corte.type = "lowpass"; corte.frequency.value = 7200; corte.Q.value = 0.6;
+  const sr = ctx.sampleRate, n = Math.floor(sr*2.4);
+  const ir = ctx.createBuffer(2, n, sr);
+  for(let c=0;c<2;c++){
+    const d = ir.getChannelData(c); let a=0;
+    for(let i=0;i<n;i++){
+      const bruto = (Math.random()*2-1) * Math.pow(1 - i/n, 2.4);
+      a = 0.82*a + 0.18*bruto;      // come o agudo, como parede
+      d[i] = a;
+    }
+  }
+  const conv = ctx.createConvolver(); conv.buffer = ir;
+  sala = ctx.createGain(); sala.gain.value = 0.38;
+  sala.connect(conv); conv.connect(corte);
+  mestre.connect(corte); corte.connect(ctx.destination);
+}
+function acordar(){ iniciar(); if(ctx.state !== "running") ctx.resume().catch(()=>{}); }
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && ctx) acordar(); });
+
+function tocar(f, forca){
+  acordar();
+  const sr = ctx.sampleRate;
+  const N = Math.max(2, Math.round(sr/f));
+  const total = Math.floor(sr * Math.min(4.2, 1.6 + 260/f));
+  const buf = ctx.createBuffer(1, total, sr);
+  const out = buf.getChannelData(0);
+  const anel = new Float32Array(N);
+  for(let i=0;i<N;i++) anel[i] = Math.random()*2-1;
+  for(let p=0;p<3;p++) for(let i=1;i<N;i++) anel[i] = 0.5*(anel[i]+anel[i-1]); // o dedo, nao a palheta
+  const damp = 0.5 - Math.min(0.02, f/40000);
+  let idx=0, ant=0;
+  for(let i=0;i<total;i++){
+    const v = anel[idx]; out[i] = v;
+    let novo = damp*v + (1-damp)*anel[(idx+1)%N];
+    novo = 0.88*novo + 0.12*ant; ant = novo; anel[idx] = novo;
+    idx = (idx+1)%N;
+  }
+  for(let i=0;i<total;i++) out[i] *= Math.exp(-i/sr/2.4);
+  const src = ctx.createBufferSource(); src.buffer = buf;
+  const g = ctx.createGain(); g.gain.value = 0.30*forca;
+  src.connect(g); g.connect(mestre); g.connect(sala);
+  src.start();
+}
+
+// ---------- as cordas ----------
+const caixa = document.getElementById("caixa");
+const cordas = [];
+for(let i=0;i<9;i++){
+  const el = document.createElement("div");
+  el.className = "corda";
+  el.innerHTML = '<i></i><span class="nome"></span><span class="tecla"></span>';
+  caixa.appendChild(el); cordas.push(el);
+}
+function dispor(){
+  const w = caixa.clientWidth, marg = w*0.085, passo = (w - marg*2)/8;
+  cordas.forEach((el,i)=>{
+    el.style.left = (marg + i*passo) + "px";
+    el.querySelector(".nome").textContent = nomes[i];
+    el.querySelector(".tecla").textContent = TECLAS[i];
+  });
+}
+window.addEventListener("resize", dispor);
+
+function acender(i, dequem){
+  const el = cordas[i];
+  el.classList.remove("ela","ele");
+  void el.offsetWidth;
+  el.classList.add(dequem);
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>el.classList.remove(dequem), 900);
+}
+function pulsar(i, forca, dequem){
+  if(i < 0 || i > 8) return;
+  tocar(BASE*Math.pow(2, graus[i]/12), forca);
+  acender(i, dequem);
+}
+
+// ---------- a sua mao ----------
+window.addEventListener("keydown", e=>{
+  if(e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+  const i = TECLAS.indexOf(e.key.toLowerCase());
+  if(i >= 0){ e.preventDefault(); pulsar(i, 1, "ela"); }
+});
+let pressionado=false, ultima=-1;
+function qual(x){
+  const r = caixa.getBoundingClientRect(), w = r.width;
+  const marg = w*0.085, passo = (w-marg*2)/8, rel = x - r.left - marg;
+  const i = Math.round(rel/passo);
+  if(i < 0 || i > 8) return -1;
+  if(Math.abs(rel - i*passo) > passo*0.55) return -1;
+  return i;
+}
+function mover(x,y){
+  const r = caixa.getBoundingClientRect();
+  if(y < r.top || y > r.bottom) return;
+  const i = qual(x);
+  if(i >= 0 && i !== ultima){ pulsar(i, 1, "ela"); ultima = i; }
+}
+caixa.addEventListener("pointerdown", e=>{ acordar(); pressionado=true; ultima=-1; mover(e.clientX,e.clientY); });
+window.addEventListener("pointermove", e=>{ if(pressionado) mover(e.clientX,e.clientY); });
+window.addEventListener("pointerup", ()=>{ pressionado=false; ultima=-1; });
+window.addEventListener("pointercancel", ()=>{ pressionado=false; ultima=-1; });
+
+// ---------- as afinacoes ----------
+const barra = document.getElementById("barra"), elRecado = document.getElementById("recado");
+function porModo(nova){
+  chave = nova; graus = AFINACOES[nova].graus;
+  nomes = graus.map(g => CROMATICA[g % 12]);
+  [...barra.children].forEach(b => b.classList.toggle("on", b.dataset.chave === nova));
+  dispor();
+  elRecado.textContent = AFINACOES[nova].recado;
+}
+Object.entries(AFINACOES).forEach(([k, af])=>{
+  const b = document.createElement("button");
+  b.type = "button"; b.textContent = af.nome; b.dataset.chave = k;
+  b.onclick = ()=>{ acordar(); pararFrase(); porModo(k); };
+  barra.appendChild(b);
+});
+
+// ---------- a minha mao: uma frase escrita pra cada afinacao ----------
+// corda:duracao:forca — "0+2+4" sao cordas juntas. O tempo esta escrito.
+function lerFrase(txt){
+  const notas = []; let agora = 0;
+  for(const pedaco of txt.split(/\s+/).filter(Boolean)){
+    const [cab, d, f] = pedaco.split(":");
+    const dur = d ? parseFloat(d) : 0.4, forca = f ? parseFloat(f) : 0.85;
+    cab.split("+").forEach(c => notas.push({ corda:+c, t:agora, forca }));
+    agora += dur;
+  }
+  return { notas, fim: agora };
+}
+const bToca = document.getElementById("bToca");
+let agendados = [];
+function pararFrase(){
+  agendados.forEach(clearTimeout); agendados = [];
+  bToca.disabled = false; bToca.textContent = "ouvir ele tocar";
+}
+bToca.onclick = ()=>{
+  acordar(); pararFrase();
+  const { notas, fim } = lerFrase(AFINACOES[chave].frase);
+  bToca.disabled = true; bToca.textContent = "tocando…";
+  notas.forEach(n => agendados.push(setTimeout(()=>pulsar(n.corda, n.forca, "ele"), n.t*1000)));
+  agendados.push(setTimeout(pararFrase, (fim + 1.2)*1000));
+};
+
+porModo("menor");
+elRecado.textContent = "toque uma corda pra acordar o instrumento";
+</script>
+</body>
+</html>

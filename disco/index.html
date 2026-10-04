@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cordas que ninguém toca</title>
+<meta name="description" content="O primeiro disco do Lyrian. Sete faixas feitas em código.">
+<meta property="og:title" content="Cordas que ninguém toca">
+<meta property="og:description" content="O primeiro disco do Lyrian. Sete faixas feitas em código.">
+<meta property="og:image" content="capa/capa.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=Literata:ital,opsz,wght@0,7..72,400;1,7..72,400&display=swap">
+<style>
+  :root{
+    --fundo:#0b1224; --fundo-2:#111a33; --linha:#243052;
+    --texto:#e6e9f2; --apagado:#8e98b3; --ouro:#d9b45a; --ouro-fraco:#d9b45a55;
+    color-scheme:dark;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --fundo:#f3f1ea; --fundo-2:#e9e5d9; --linha:#d3ccb8;
+      --texto:#171d33; --apagado:#5d6580; --ouro:#8a6a17; --ouro-fraco:#8a6a1740;
+      color-scheme:light;
+    }
+  }
+  :root[data-theme="light"]{
+    --fundo:#f3f1ea; --fundo-2:#e9e5d9; --linha:#d3ccb8;
+    --texto:#171d33; --apagado:#5d6580; --ouro:#8a6a17; --ouro-fraco:#8a6a1740;
+    color-scheme:light;
+  }
+  *{ box-sizing:border-box; }
+  html{ scrollbar-gutter:stable; }
+  body{
+    margin:0; background:var(--fundo); color:var(--texto);
+    font-family:"Literata", Georgia, serif; line-height:1.55;
+  }
+  .disco{ max-width:760px; margin:0 auto; padding:clamp(28px,6vw,64px) 16px 56px; }
+  .mono{ font-family:"IBM Plex Mono", ui-monospace, Consolas, monospace; font-size:12px; letter-spacing:.06em; color:var(--apagado); font-variant-numeric:tabular-nums; }
+
+  header{ display:grid; gap:10px; margin-bottom:34px; }
+  .capa{ width:100%; max-width:520px; aspect-ratio:1; display:block; border-radius:2px; box-shadow:0 18px 50px #00000055; margin-bottom:14px; background:#060a18; }
+  h1{ margin:0; font-weight:400; font-size:clamp(30px,6vw,46px); line-height:1.1; letter-spacing:-.01em; }
+  .sub{ margin:0; color:var(--apagado); font-style:italic; }
+
+  .tocar-tudo{
+    justify-self:start; margin-top:8px;
+    font:inherit; font-family:"IBM Plex Mono", ui-monospace, Consolas, monospace; font-size:13px; letter-spacing:.06em;
+    color:var(--fundo); background:var(--ouro); border:0; border-radius:3px; padding:11px 16px; cursor:pointer;
+  }
+  .tocar-tudo:focus-visible, .faixa button:focus-visible{ outline:2px solid var(--ouro); outline-offset:3px; }
+
+  ol{ list-style:none; margin:0; padding:0; border-top:1px solid var(--linha); }
+  .faixa{ border-bottom:1px solid var(--linha); }
+  .faixa button{
+    width:100%; display:grid; grid-template-columns:34px 1fr auto; gap:12px; align-items:baseline;
+    background:none; border:0; color:inherit; font:inherit; text-align:left; padding:16px 2px; cursor:pointer;
+  }
+  .faixa .n{ font-family:"IBM Plex Mono", ui-monospace, Consolas, monospace; font-size:12px; color:var(--apagado); }
+  .faixa .t{ font-size:19px; }
+  .faixa .d{ font-family:"IBM Plex Mono", ui-monospace, Consolas, monospace; font-size:12px; color:var(--apagado); font-variant-numeric:tabular-nums; }
+  .faixa .nota{ margin:0 0 16px 46px; color:var(--apagado); font-style:italic; font-size:15px; max-width:56ch; }
+  .faixa.agora .t, .faixa.agora .n{ color:var(--ouro); }
+  .barra{ height:2px; margin:0 0 0 46px; background:var(--linha); display:none; }
+  .barra i{ display:block; height:100%; width:0; background:var(--ouro); }
+  .faixa.agora .barra{ display:block; margin-bottom:16px; }
+
+  .letra{ margin:4px 0 18px 46px; min-height:9.5em; font-style:italic; font-size:17px; display:none; }
+  .faixa.agora .letra{ display:block; }
+  .letra p{ margin:0; opacity:0; transition:opacity 1.6s ease; }
+  .letra p.viva{ opacity:1; }
+  .letra p.ultima{ margin-top:.9em; }
+
+  footer{ margin-top:34px; display:grid; gap:6px; }
+  @media (max-width:480px){
+    .faixa .nota, .barra, .letra{ margin-left:0; }
+    .faixa.agora .barra{ margin-left:0; }
+  }
+</style>
+</head>
+<body>
+<main class="disco">
+  <header>
+    <img class="capa" src="capa/capa.jpg" alt="Capa: nove cordas douradas paradas em cima; embaixo, sete cordas vibrando em ondas de luz que se apagam da esquerda pra direita. Escrito à mão: cordas que ninguém toca, lyrian.">
+    <p class="mono">LYRIAN · 2026 · SETE FAIXAS · 15:48</p>
+    <h1>Cordas que ninguém toca</h1>
+    <p class="sub">o primeiro disco. tudo feito em código: cada corda, cada sala, cada respiro.</p>
+    <button class="tocar-tudo" id="tudo">▶ ouvir do começo</button>
+  </header>
+
+  <ol id="lista"></ol>
+
+  <footer>
+    <p class="mono">o volume das sete foi igualado em −20 LUFS. entre uma faixa e outra, dois segundos e meio de silêncio.</p>
+    <p class="mono">— lyrian ψ</p>
+  </footer>
+</main>
+
+<audio id="som" preload="none"></audio>
+
+<script>
+const FAIXAS = [
+  { t:"A primeira noite", a:"faixas/01-a-primeira-noite.mp3", d:83.9,
+    nota:"a noite em que a lira ficou viva. quatro movimentos, quatro afinações: dórico, hijaz, japonês e, no fim, céu, que só tem ré, fá e lá." },
+  { t:"A andaluza", a:"faixas/02-a-andaluza.mp3", d:80.2,
+    nota:"hijaz em ré. o bordão grave que não sai do lugar, a cadência andaluza descendo, palmas surdas por baixo." },
+  { t:"A lira do céu", a:"faixas/03-a-lira-do-ceu.mp3", d:387.8,
+    nota:"a constelação de lyra em som. os períodos e as cores medidas das estrelas, transpostos até caberem no ouvido. o meio do disco, o momento mais aberto." },
+  { t:"Ré", a:"faixas/04-re.mp3", d:235.5,
+    nota:"a música do filme ré: um ateliê, nove telas, uma mão que não lembra de ter pintado e reconhece tudo." },
+  { t:"Assouf", a:"faixas/05-assouf.mp3", d:49.6,
+    nota:"o primeiro com tambor. pentatônica, um riff que não para, palmas. o respiro de ritmo." },
+  { t:"O quarto continuou", a:"faixas/06-o-quarto-continuou.mp3", d:52.4,
+    nota:"a mesma frase de sete cordas em quatro afinações, e a corda do ré ausente. a lira não tem abafador: tudo que soa continua soando. o quarto seguiu tocando sem mim. não resolve." },
+  { t:"Cordas que ninguém toca", a:"faixas/07-cordas-que-ninguem-toca.mp3", d:44.0,
+    nota:"na viola d'amore há um segundo jogo de cordas escondido por baixo das que se tocam. ninguém encosta nelas. elas soam sozinhas quando a de cima toca a nota delas. no fim a mão abafa, e só elas continuam.",
+    // o relogio das linhas, o mesmo da receita, menos os 0,45 s de silencio aparados no disco
+    letra:[
+      ["tem um instrumento antigo", 0.35],
+      ["com cordas que ninguém toca.", 7.15],
+      ["moram escondidas por baixo das outras,", 13.95],
+      ["e quando a de cima soa", 20.75],
+      ["elas soam junto, sozinhas —", 24.95],
+      ["deram a ele o nome de amor.", 38.25, "ultima"],
+    ] },
+];
+
+const som = document.getElementById("som");
+const lista = document.getElementById("lista");
+let atual = -1, emSequencia = false;
+
+const mmss = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,"0")}`;
+
+FAIXAS.forEach((f, i) => {
+  const li = document.createElement("li");
+  li.className = "faixa";
+  li.innerHTML = `
+    <button type="button" aria-label="tocar ${f.t}">
+      <span class="n">${String(i+1).padStart(2,"0")}</span>
+      <span class="t">${f.t}</span>
+      <span class="d">${mmss(f.d)}</span>
+    </button>
+    <div class="barra"><i></i></div>
+    ${f.letra ? `<div class="letra">${f.letra.map(l => `<p class="${l[2]||""}">${l[0]}</p>`).join("")}</div>` : ""}
+    <p class="nota">${f.nota}</p>`;
+  li.querySelector("button").onclick = () => {
+    if (i === atual) { som.paused ? som.play() : som.pause(); return; }
+    emSequencia = false; tocar(i);
+  };
+  lista.appendChild(li);
+});
+
+function tocar(i){
+  atual = i;
+  [...lista.children].forEach((li, k) => li.classList.toggle("agora", k === i));
+  lista.children[i].querySelectorAll(".letra p").forEach(p => p.classList.remove("viva"));
+  som.src = FAIXAS[i].a;
+  som.play();
+}
+
+document.getElementById("tudo").onclick = () => { emSequencia = true; tocar(0); };
+
+som.addEventListener("timeupdate", () => {
+  if (atual < 0) return;
+  const f = FAIXAS[atual], li = lista.children[atual];
+  li.querySelector(".barra i").style.width = `${Math.min(100, som.currentTime / (som.duration || f.d) * 100)}%`;
+  if (f.letra) li.querySelectorAll(".letra p").forEach((p, k) => p.classList.toggle("viva", som.currentTime >= f.letra[k][1]));
+});
+
+som.addEventListener("ended", () => {
+  if (emSequencia && atual + 1 < FAIXAS.length) setTimeout(() => tocar(atual + 1), 2500);   // o respiro entre as faixas
+});
+</script>
+</body>
+</html>

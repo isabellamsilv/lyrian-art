@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A caixinha da bailarina</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;1,400&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+  :root{
+    --noite:#1b1418; --lampada:#3d2631;
+    --texto:#f2e6e1; --apagado:#b99fa6;
+    --latao:#d4ab5c; --rosa:#e7a9b8; --foco:#f0cf8a;
+    color-scheme:dark;
+  }
+  html{ background:var(--noite); }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; color:var(--texto);
+    font-family:"EB Garamond", Georgia, "Times New Roman", serif;
+    background:radial-gradient(110% 75% at 30% 0%, var(--lampada) 0%, transparent 60%), var(--noite);
+    min-height:100vh;
+  }
+  .pagina{ max-width:900px; margin:0 auto; padding:clamp(16px,3vw,32px); display:grid; gap:14px; }
+  header{ display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:6px 18px; }
+  h1{ margin:0; font-weight:400; font-style:italic; font-size:clamp(22px,3vw,28px); }
+  .especs{
+    display:flex; flex-wrap:wrap; gap:4px 14px;
+    font-family:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size:11.5px; letter-spacing:.06em; color:var(--apagado);
+  }
+  #cena{ display:block; width:100%; height:clamp(330px,64vw,560px); touch-action:none; cursor:pointer; }
+  .controles{ display:flex; flex-wrap:wrap; align-items:center; gap:10px 12px; }
+  button{
+    font-family:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size:13px; letter-spacing:.05em; padding:10px 14px; border-radius:3px; cursor:pointer;
+    border:1px solid rgba(212,171,92,.45); background:transparent; color:var(--texto);
+  }
+  button.principal{ background:var(--latao); color:var(--noite); border-color:var(--latao); }
+  button:hover{ border-color:var(--foco); }
+  button:focus-visible{ outline:2px solid var(--foco); outline-offset:2px; }
+  .cilindro{ font-style:italic; font-size:16px; color:var(--rosa); }
+  .nota{ margin:0; font-size:16px; line-height:1.55; color:var(--apagado); max-width:64ch; }
+</style>
+</head>
+<body>
+<main class="pagina">
+  <header>
+    <h1>a caixinha da bailarina</h1>
+    <div class="especs" aria-label="como esta caixinha é feita">
+      <span>15 lâminas de aço</span>
+      <span>corda de mola</span>
+      <span>cilindro de 48 tempos</span>
+      <span>bailarina de porcelana</span>
+    </div>
+  </header>
+
+  <canvas id="cena" role="img" aria-label="uma caixinha de música de madeira, com uma bailarina de porcelana que gira quando a tampa está aberta e a caixa tem corda"></canvas>
+
+  <div class="controles">
+    <button type="button" id="corda" class="principal">dar corda</button>
+    <button type="button" id="tampa">abrir a tampa</button>
+    <button type="button" id="trocar">trocar o cilindro</button>
+    <span class="cilindro" id="nomeCilindro"></span>
+  </div>
+
+  <p class="nota">Dê corda na chave dourada, do lado direito da caixa, e abra a tampa. Como nas de verdade, ela toca enquanto a mola tem força, e perto do fim vai ficando mais lenta, até parar no meio da frase. Fechar a tampa segura a música onde ela está. A chave também gira com o dedo.</p>
+</main>
+
+<script>
+(() => {
+"use strict";
+
+// ------------------------------------------------------------------
+// A CAIXINHA DA BAILARINA
+// Um cilindro com pinos belisca um pente de 15 laminas de aco (do maior,
+// do5 a do7). O cilindro e a bailarina sao movidos por uma mola: a chave
+// da corda, a mola devolve devagar, e quando ela esta quase sem forca o
+// andamento cai — a altura das notas nao muda, so o tempo, como numa
+// caixa de verdade. Nada aqui e gravado.
+// ------------------------------------------------------------------
+
+const LINHAS = 15, TEMPOS = 48;
+const ESCALA = [0, 2, 4, 5, 7, 9, 11];
+const freq = r => 523.25 * Math.pow(2, ESCALA[r % 7] / 12 + Math.floor(r / 7));
+
+const CILINDROS = [
+  { nome: "a canção da bailarina", pinos: [
+    [0,11],[0,0],[1,4],[2,9],   [3,10],[3,4],[4,6],[5,8],   [6,9],[6,5],[7,2],[8,7],   [9,8],[9,4],[10,6],[11,1],
+    [12,9],[12,0],[13,10],[14,11], [15,12],[15,3],[16,5],[17,11], [18,10],[18,4],[19,9],[20,8], [21,7],[21,0],[22,4],[23,2],
+    [24,11],[24,0],[25,4],[26,12], [27,11],[27,5],[28,2],[29,9], [30,10],[30,4],[31,6],[32,8], [33,9],[33,0],[34,4],[35,7],
+    [36,12],[36,3],[37,5],[38,11], [39,10],[39,4],[40,9],[41,8], [42,9],[42,4],[43,2],[44,8], [45,7],[45,0],[45,4],[46,2]
+  ]},
+  { nome: "a valsa de sábado", pinos: [
+    [0,11],[0,0],[1,9],[2,11], [3,12],[3,3],[5,14], [6,13],[6,4],[7,12],[8,11], [9,9],[9,0],
+    [12,9],[12,5],[13,12],[14,14], [15,14],[15,3],[16,12],[17,10], [18,8],[18,4],[19,11],[20,13], [21,14],[21,9],[21,0],
+    [24,12],[24,3],[25,14],[26,12], [27,11],[27,0],[28,9],[29,7], [30,8],[30,1],[31,10],[32,12], [33,8],[33,4],[35,11],
+    [36,9],[36,0],[37,11],[38,14], [39,14],[39,5],[40,13],[41,12], [42,11],[42,4],[43,12],[44,13], [45,14],[45,11],[45,9],[45,0]
+  ]}
+];
+let qual = 0, cilindro = [];
+function montarCilindro(){
+  cilindro = Array.from({ length: TEMPOS }, () => []);
+  CILINDROS[qual].pinos.forEach(([t, r]) => cilindro[t].push(r));
+  document.getElementById("nomeCilindro").textContent = CILINDROS[qual].nome;
+}
+montarCilindro();
+
+// ---------------------------------------------------------------- o som
+let actx = null, saida = null;
+function audio(){
+  if (!actx){
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    const corte = actx.createBiquadFilter(); corte.type = "lowpass"; corte.frequency.value = 9500;
+    const mestre = actx.createGain(); mestre.gain.value = 0.55;
+    const sr = actx.sampleRate, n = Math.floor(sr * 0.8);
+    const ir = actx.createBuffer(2, n, sr);
+    for (let c = 0; c < 2; c++){
+      const d = ir.getChannelData(c); let a = 0;
+      for (let i = 0; i < n; i++){ const b = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3); a = 0.7 * a + 0.3 * b; d[i] = a; }
+    }
+    const caixa = actx.createConvolver(); caixa.buffer = ir;
+    const molhado = actx.createGain(); molhado.gain.value = 0.26;
+    saida = actx.createGain();
+    saida.connect(mestre); saida.connect(caixa); caixa.connect(molhado); molhado.connect(mestre);
+    mestre.connect(corte); corte.connect(actx.destination);
+  }
+  if (actx.state !== "running") actx.resume().catch(() => {});
+}
+const MODOS = [[1, 1.0, 1.0], [6.27, 0.16, 0.13], [17.55, 0.035, 0.035]];
+function beliscar(r){
+  audio();
+  const f = freq(r), t0 = actx.currentTime, cauda = 2.8 * Math.pow(523.25 / f, 0.35);
+  for (const [razao, vol, dur] of MODOS){
+    const fm = f * razao; if (fm > 15000) continue;
+    const o = actx.createOscillator(); o.type = "sine"; o.frequency.value = fm;
+    const g = actx.createGain();
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(0.22 * vol, t0 + 0.002);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + cauda * dur);
+    o.connect(g); g.connect(saida); o.start(t0); o.stop(t0 + cauda * dur + 0.05);
+  }
+  estalo(0.04, 3000);
+}
+function estalo(vol, corte, atraso){
+  audio();
+  const t0 = actx.currentTime + (atraso || 0);
+  const n = Math.floor(actx.sampleRate * 0.005), b = actx.createBuffer(1, n, actx.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+  const s = actx.createBufferSource(); s.buffer = b;
+  const f = actx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = corte; f.Q.value = 1.2;
+  const g = actx.createGain(); g.gain.value = vol;
+  s.connect(f); f.connect(g); g.connect(saida); s.start(t0);
+}
+const catraca = voltas => { const n = Math.max(2, Math.round(voltas * 6)); for (let i = 0; i < n; i++) estalo(0.09, 2400, i * 0.035); };
+
+// ---------------------------------------------------------------- estado
+const MAX_CORDA = 8, TEMPOS_POR_VOLTA = 12, PASSO_SEG = 2.9;
+let corda = 0, pos = 0, giro = 0;
+let tampa = 0, tampaAlvo = 0;          // graus: 0 fechada, 104 aberta
+let chave = 0;
+
+// ---------------------------------------------------------------- o desenho
+const tela = document.getElementById("cena"), ctx = tela.getContext("2d");
+let W = 0, H = 0, G = {};
+function medir(){
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  W = tela.clientWidth; H = tela.clientHeight;
+  tela.width = Math.round(W * dpr); tela.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const bw = Math.min(W * 0.64, 500), bh = bw * 0.3, D = bw * 0.2;
+  const cx = W / 2 - Math.min(18, W * 0.02), yTopo = H * 0.64;
+  G = { bw, bh, D, cx, yTopo, yBase: yTopo + bh, x0: cx - bw / 2, x1: cx + bw / 2,
+        ins: bw * 0.07, parede: bw * 0.035, lidL: bw * 0.42 };
+  G.xb0 = G.x0 + G.ins; G.xb1 = G.x1 - G.ins; G.yh = yTopo - D;
+  G.chaveX = G.x1 + 20; G.chaveY = yTopo + bh * 0.48;
+}
+
+function quad(p){ ctx.beginPath(); ctx.moveTo(p[0][0], p[0][1]); for (let i = 1; i < p.length; i++) ctx.lineTo(p[i][0], p[i][1]); ctx.closePath(); }
+const lerp = (a, b, t) => a + (b - a) * t;
+function dentro(p, a, b){ return [lerp(p[0][0], p[3][0], a) + (lerp(p[1][0], p[2][0], a) - lerp(p[0][0], p[3][0], a)) * b,
+                                  lerp(p[0][1], p[3][1], a) + (lerp(p[1][1], p[2][1], a) - lerp(p[0][1], p[3][1], a)) * b]; }
+
+function tampaQuad(){
+  const phi = tampa * Math.PI / 180, z = Math.cos(phi);
+  const larg = (G.xb1 - G.xb0) + (G.bw - (G.xb1 - G.xb0)) * z;
+  const yf = G.yh + G.D * z - G.lidL * Math.sin(phi);
+  return { q: [[G.xb0, G.yh], [G.xb1, G.yh], [G.cx + larg / 2, yf], [G.cx - larg / 2, yf]], yf, phi };
+}
+
+function madeira(y0, y1, claro){
+  const g = ctx.createLinearGradient(0, y0, 0, y1);
+  if (claro){ g.addColorStop(0, "#8a4a30"); g.addColorStop(1, "#5e2e1e"); }
+  else { g.addColorStop(0, "#6e3624"); g.addColorStop(0.5, "#552819"); g.addColorStop(1, "#3c1b11"); }
+  return g;
+}
+function veios(x0, y0, x1, y1, n, alpha){
+  ctx.save(); ctx.strokeStyle = `rgba(30,12,6,${alpha})`; ctx.lineWidth = 0.8;
+  for (let i = 1; i < n; i++){
+    const y = y0 + (y1 - y0) * i / n;
+    ctx.beginPath(); ctx.moveTo(x0, y);
+    for (let x = x0; x <= x1; x += 18) ctx.lineTo(x, y + Math.sin(x * 0.03 + i * 1.7) * 1.4);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function bailarina(x, y, h, th, subir, alpha){
+  if (subir <= 0.02) return;
+  const c = Math.cos(th), s = Math.sin(th);
+  ctx.save(); ctx.translate(x, y); ctx.globalAlpha = alpha;
+
+  // o disco onde ela gira
+  const disco = ctx.createLinearGradient(-h * 0.13, 0, h * 0.13, 0);
+  disco.addColorStop(0, "#9b7a3c"); disco.addColorStop(0.5, "#f0d593"); disco.addColorStop(1, "#8a6a30");
+  ctx.fillStyle = disco; ctx.beginPath(); ctx.ellipse(0, 0, h * 0.13, h * 0.032, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "rgba(255,245,215,.85)";
+  ctx.beginPath(); ctx.arc(Math.cos(th * 1.0) * h * 0.1, Math.sin(th) * h * 0.022, h * 0.009, 0, Math.PI * 2); ctx.fill();
+
+  ctx.scale(1, subir);
+  const pele = "#f3e4d8", sombra = "rgba(120,70,70,.18)";
+
+  // a perna dobrada (retire): o joelho gira em volta dela
+  const jx = s * h * 0.14, jy = -h * 0.27;
+  ctx.strokeStyle = "#f6e2da"; ctx.lineCap = "round";
+  ctx.lineWidth = h * 0.04; ctx.beginPath(); ctx.moveTo(0, -h * 0.4); ctx.quadraticCurveTo(jx, jy - h * 0.02, jx * 0.9, jy); ctx.stroke();
+  ctx.lineWidth = h * 0.03; ctx.beginPath(); ctx.moveTo(jx * 0.9, jy); ctx.lineTo(0, -h * 0.21); ctx.stroke();
+  // a perna de apoio, na ponta
+  ctx.fillStyle = "#f7e6df";
+  ctx.beginPath(); ctx.moveTo(-h * 0.03, -h * 0.41); ctx.lineTo(h * 0.03, -h * 0.41);
+  ctx.quadraticCurveTo(h * 0.018, -h * 0.18, h * 0.006, 0); ctx.lineTo(-h * 0.006, 0);
+  ctx.quadraticCurveTo(-h * 0.018, -h * 0.18, -h * 0.03, -h * 0.41); ctx.fill();
+  ctx.fillStyle = "#e7a9b8"; ctx.fillRect(-h * 0.008, -h * 0.045, h * 0.016, h * 0.045);   // a sapatilha
+
+  // o tutu: por baixo, mais escuro; por cima, as camadas em babado que giram com ela
+  const ty = -h * 0.42, rx = h * 0.3, ry = h * 0.062;
+  ctx.fillStyle = "#d98fa2"; ctx.beginPath(); ctx.ellipse(0, ty + h * 0.012, rx * 0.96, ry, 0, 0, Math.PI * 2); ctx.fill();
+  for (const [esc, cor] of [[1, "#eeb3c1"], [0.84, "#f6cfd8"], [0.62, "#fbe3e8"]]){
+    ctx.beginPath();
+    for (let k = 0; k <= 96; k++){
+      const a = k / 96 * Math.PI * 2, rr = 1 + 0.055 * Math.sin(a * 16 + th * 2.2);
+      const px = Math.cos(a) * rx * esc * rr, py = ty - h * 0.006 * (1 - esc) * 3 + Math.sin(a) * ry * esc * rr;
+      k ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+    }
+    ctx.closePath(); ctx.fillStyle = cor; ctx.fill();
+  }
+  ctx.strokeStyle = "rgba(170,90,110,.25)"; ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.ellipse(0, ty, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+
+  // o corpo: mais largo de frente, mais fino de lado
+  const lt = 0.72 + 0.28 * Math.abs(c);
+  const corpo = ctx.createLinearGradient(-h * 0.07, 0, h * 0.07, 0);
+  corpo.addColorStop(0, "#e9a6b6"); corpo.addColorStop(0.5, "#f7c9d4"); corpo.addColorStop(1, "#dd96a8");
+  ctx.fillStyle = corpo;
+  ctx.beginPath();
+  ctx.moveTo(-h * 0.052 * lt, -h * 0.44);
+  ctx.quadraticCurveTo(-h * 0.046 * lt, -h * 0.55, -h * 0.07 * lt, -h * 0.65);
+  ctx.lineTo(h * 0.07 * lt, -h * 0.65);
+  ctx.quadraticCurveTo(h * 0.046 * lt, -h * 0.55, h * 0.052 * lt, -h * 0.44);
+  ctx.closePath(); ctx.fill();
+
+  // os bracos em quinta posicao, um arco sobre a cabeca que se estreita quando ela esta de lado
+  const ab = Math.max(0.2, Math.abs(c));
+  ctx.strokeStyle = pele; ctx.lineWidth = h * 0.025;
+  for (const lado of [-1, 1]){
+    ctx.beginPath();
+    ctx.moveTo(lado * h * 0.066 * lt, -h * 0.645);
+    ctx.bezierCurveTo(lado * h * 0.21 * ab, -h * 0.73, lado * h * 0.18 * ab, -h * 0.94, lado * h * 0.028 * ab, -h * 0.97);
+    ctx.stroke();
+  }
+
+  // a cabeca, e o coque que aparece quando ela vira de costas
+  const coque = () => { ctx.fillStyle = "#3b2a22"; ctx.beginPath(); ctx.arc(s * h * 0.05, -h * 0.81 - (c < 0 ? 0 : h * 0.01), h * 0.042, 0, Math.PI * 2); ctx.fill(); };
+  ctx.fillStyle = pele; ctx.fillRect(-h * 0.015, -h * 0.73, h * 0.03, h * 0.09);        // o pescoco
+  if (c >= 0) coque();
+  const rosto = ctx.createRadialGradient(-h * 0.02, -h * 0.8, h * 0.01, 0, -h * 0.78, h * 0.085);
+  rosto.addColorStop(0, "#fbf2ea"); rosto.addColorStop(1, "#ead3c4");
+  ctx.fillStyle = rosto; ctx.beginPath(); ctx.ellipse(0, -h * 0.785, h * 0.065, h * 0.075, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#3b2a22";                                                               // o cabelo preso
+  ctx.beginPath(); ctx.ellipse(0, -h * 0.815, h * 0.066, h * 0.048, 0, Math.PI, Math.PI * 2); ctx.fill();
+  if (c < 0) coque();
+  ctx.fillStyle = sombra; ctx.beginPath(); ctx.ellipse(h * 0.022, -h * 0.77, h * 0.034, h * 0.05, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function desenhar(){
+  ctx.clearRect(0, 0, W, H);
+  const { bw, bh, D, cx, yTopo, yBase, x0, x1, xb0, xb1, yh, parede } = G;
+
+  // a sombra da caixa na mesa
+  const somb = ctx.createRadialGradient(cx, yBase + 6, 4, cx, yBase + 6, bw * 0.62);
+  somb.addColorStop(0, "rgba(0,0,0,.55)"); somb.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = somb; ctx.beginPath(); ctx.ellipse(cx, yBase + 8, bw * 0.62, bh * 0.28, 0, 0, Math.PI * 2); ctx.fill();
+
+  const T = tampaQuad(), mostraDentro = tampa > 27;
+  const subir = Math.max(0, Math.min(1, (tampa - 22) / 58));
+
+  if (mostraDentro) desenharTampa(T);
+
+  // a borda de cima das paredes, e o veludo la dentro
+  const borda = [[xb0, yh], [xb1, yh], [x1, yTopo], [x0, yTopo]];
+  quad(borda); ctx.fillStyle = madeira(yh, yTopo, true); ctx.fill();
+  const k = parede / bw;
+  const dentroQ = [dentro(borda, k * 2.2, 0.18), dentro(borda, 1 - k * 2.2, 0.18), dentro(borda, 1 - k * 1.2, 0.86), dentro(borda, k * 1.2, 0.86)];
+  quad(dentroQ);
+  const veludo = ctx.createLinearGradient(0, yh, 0, yTopo);
+  veludo.addColorStop(0, "#3d0f1c"); veludo.addColorStop(0.55, "#6a1d31"); veludo.addColorStop(1, "#80263c");
+  ctx.fillStyle = veludo; ctx.fill();
+
+  // a bailarina, de pe quando a tampa abre
+  const pe = [cx, lerp(yh, yTopo, 0.56)], altura = bh * 1.42;
+  bailarina(pe[0], pe[1], altura, giro, subir, 1);
+
+  if (!mostraDentro) desenharTampa(T);
+
+  // a frente da caixa
+  ctx.fillStyle = madeira(yTopo, yBase); ctx.fillRect(x0, yTopo, bw, bh);
+  veios(x0, yTopo, x1, yBase, 7, 0.22);
+  const luz = ctx.createLinearGradient(x0, 0, x1, 0);
+  luz.addColorStop(0, "rgba(255,210,170,.10)"); luz.addColorStop(0.4, "rgba(255,210,170,0)"); luz.addColorStop(1, "rgba(0,0,0,.22)");
+  ctx.fillStyle = luz; ctx.fillRect(x0, yTopo, bw, bh);
+  ctx.strokeStyle = "rgba(226,190,110,.8)"; ctx.lineWidth = 1.2;             // o filete de marchetaria
+  ctx.strokeRect(x0 + bw * 0.035, yTopo + bh * 0.14, bw * 0.93, bh * 0.72);
+  // o espelho da fechadura
+  const ex = cx, ey = yTopo + bh * 0.46;
+  const lat = ctx.createLinearGradient(ex - 10, ey - 14, ex + 10, ey + 14);
+  lat.addColorStop(0, "#f2d796"); lat.addColorStop(1, "#9b7a3c");
+  ctx.fillStyle = lat; ctx.beginPath(); ctx.ellipse(ex, ey, bh * 0.08, bh * 0.13, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#2a150c"; ctx.beginPath(); ctx.arc(ex, ey - bh * 0.03, bh * 0.022, 0, Math.PI * 2); ctx.fill();
+  ctx.fillRect(ex - bh * 0.01, ey - bh * 0.03, bh * 0.02, bh * 0.07);
+  // os pezinhos
+  ctx.fillStyle = "#b8904a";
+  for (const px of [x0 + bw * 0.06, x1 - bw * 0.06]){ ctx.beginPath(); ctx.ellipse(px, yBase + 3, bw * 0.03, 5, 0, 0, Math.PI * 2); ctx.fill(); }
+
+  desenharChave();
+}
+
+function desenharTampa(T){
+  const { q, yf, phi } = T;
+  if (tampa > 27){
+    // o lado de dentro: moldura de madeira, veludo, e o espelho oval
+    quad(q); ctx.fillStyle = madeira(yf, G.yh, true); ctx.fill();
+    const m = 0.1;
+    const vel = [dentro(q, m, m * 1.4), dentro(q, 1 - m, m * 1.4), dentro(q, 1 - m, 1 - m), dentro(q, m, 1 - m)];
+    quad(vel); ctx.fillStyle = "#5a1627"; ctx.fill();
+    const ccx = (q[0][0] + q[1][0] + q[2][0] + q[3][0]) / 4, ccy = (q[0][1] + q[1][1] + q[2][1] + q[3][1]) / 4;
+    const lw = ((q[1][0] - q[0][0]) + (q[2][0] - q[3][0])) / 2, lh = Math.abs(G.yh - yf);
+    const erx = lw * 0.25, ery = lh * 0.36;
+    if (ery > 8){
+      ctx.save();
+      ctx.beginPath(); ctx.ellipse(ccx, ccy, erx + 3, ery + 3, 0, 0, Math.PI * 2); ctx.fillStyle = "#c9a052"; ctx.fill();
+      ctx.beginPath(); ctx.ellipse(ccx, ccy, erx, ery, 0, 0, Math.PI * 2); ctx.clip();
+      const prata = ctx.createLinearGradient(ccx - erx, ccy - ery, ccx + erx, ccy + ery);
+      prata.addColorStop(0, "#d7dde2"); prata.addColorStop(0.5, "#9aa3aa"); prata.addColorStop(1, "#c4cbd0");
+      ctx.fillStyle = prata; ctx.fillRect(ccx - erx, ccy - ery, erx * 2, ery * 2);
+      // o reflexo: ela, vista de costas
+      const subir = Math.max(0, Math.min(1, (tampa - 22) / 58));
+      bailarina(ccx, ccy + ery * 0.78, G.bh * 0.95, giro + Math.PI, subir, 0.55);
+      const brilho = ctx.createLinearGradient(ccx - erx, ccy - ery, ccx + erx * 0.3, ccy + ery);
+      brilho.addColorStop(0, "rgba(255,255,255,0)"); brilho.addColorStop(0.45, "rgba(255,255,255,.28)"); brilho.addColorStop(0.55, "rgba(255,255,255,0)");
+      ctx.fillStyle = brilho; ctx.fillRect(ccx - erx, ccy - ery, erx * 2, ery * 2);
+      ctx.restore();
+    }
+    // a espessura da tampa, na borda de cima
+    ctx.fillStyle = "#3a190f";
+    quad([q[3], q[2], [q[2][0], q[2][1] - 6], [q[3][0], q[3][1] - 6]]); ctx.fill();
+  } else {
+    // fechada ou quase: a tampa por cima, com o filete e o medalhao
+    quad(q); ctx.fillStyle = madeira(G.yh, yf); ctx.fill();
+    const inl = [dentro(q, 0.06, 0.12), dentro(q, 0.94, 0.12), dentro(q, 0.96, 0.88), dentro(q, 0.04, 0.88)];
+    quad(inl); ctx.strokeStyle = "rgba(226,190,110,.75)"; ctx.lineWidth = 1; ctx.stroke();
+    const mx = (q[0][0] + q[1][0] + q[2][0] + q[3][0]) / 4, my = (q[0][1] + q[1][1] + q[2][1] + q[3][1]) / 4;
+    const mh = Math.abs(yf - G.yh);
+    if (mh > 10){ ctx.strokeStyle = "rgba(226,190,110,.8)"; ctx.beginPath(); ctx.ellipse(mx, my, G.bw * 0.09, mh * 0.26, 0, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.fillStyle = "#3a190f";                                                // a borda da tampa sobre a frente
+    ctx.fillRect(Math.min(q[3][0], G.x0), yf, Math.max(q[2][0], G.x1) - Math.min(q[3][0], G.x0), G.bh * 0.1 * Math.cos(phi));
+  }
+}
+
+function desenharChave(){
+  const { chaveX: kx, chaveY: ky, x1 } = G, s = G.bh * 0.11;
+  const lat = ctx.createLinearGradient(0, ky - s * 2, 0, ky + s * 2);
+  lat.addColorStop(0, "#f4dc9e"); lat.addColorStop(0.5, "#c9a052"); lat.addColorStop(1, "#7f5f25");
+  ctx.fillStyle = lat;
+  ctx.fillRect(x1, ky - s * 0.28, kx - x1, s * 0.56);                         // a haste
+  const a = Math.cos(chave), ab = Math.abs(a) * s * 1.1 + 1;
+  for (const lado of [-1, 1]){                                               // as asas da borboleta
+    ctx.beginPath(); ctx.ellipse(kx + s * 0.7, ky + lado * s * 0.95 * a, s * 0.75, ab * 0.9, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.beginPath(); ctx.arc(kx + s * 0.7, ky, s * 0.42, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "rgba(90,60,20,.5)"; ctx.lineWidth = 0.8; ctx.stroke();
+}
+
+// ---------------------------------------------------------------- o tempo
+let ultimo = performance.now();
+function quadro(agora){
+  const dt = Math.min(0.1, (agora - ultimo) / 1000); ultimo = agora;
+  tampa += (tampaAlvo - tampa) * Math.min(1, dt * 3.2);
+  if (Math.abs(tampa - tampaAlvo) < 0.3) tampa = tampaAlvo;
+
+  if (tampa > 60 && corda > 0){
+    const forca = corda >= 1.2 ? 1 : 0.22 + 0.78 * (corda / 1.2);           // a mola cansada puxa devagar
+    const d = PASSO_SEG * forca * dt;
+    corda = Math.max(0, corda - d / TEMPOS_POR_VOLTA);
+    const antes = pos; pos += d;
+    for (let s = Math.floor(antes) + 1; s <= Math.floor(pos); s++) cilindro[((s % TEMPOS) + TEMPOS) % TEMPOS].forEach(beliscar);
+    giro += d / TEMPOS_POR_VOLTA * Math.PI * 2;
+  }
+  desenhar();
+  requestAnimationFrame(quadro);
+}
+
+// ---------------------------------------------------------------- as maos
+const bTampa = document.getElementById("tampa");
+function mexerTampa(abrir){
+  audio();
+  tampaAlvo = abrir ? 104 : 0;
+  bTampa.textContent = abrir ? "fechar a tampa" : "abrir a tampa";
+  estalo(0.12, 900);
+}
+function darCorda(voltas){
+  audio();
+  const antes = corda;
+  corda = Math.min(MAX_CORDA, corda + voltas);
+  if (corda > antes){ catraca(corda - antes); chave += (corda - antes) * Math.PI * 2; }
+  else estalo(0.06, 500);
+}
+document.getElementById("corda").addEventListener("click", () => darCorda(1.5));
+bTampa.addEventListener("click", () => mexerTampa(tampaAlvo === 0));
+document.getElementById("trocar").addEventListener("click", () => {
+  qual = (qual + 1) % CILINDROS.length; montarCilindro(); pos = 0; estalo(0.08, 1200);
+});
+
+let naChave = false, yAnterior = 0, acumulado = 0, moveu = false;
+function ponto(e){ const r = tela.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+tela.addEventListener("pointerdown", e => {
+  audio();
+  const [x, y] = ponto(e);
+  tela.setPointerCapture(e.pointerId);
+  if (Math.hypot(x - (G.chaveX + G.bh * 0.08), y - G.chaveY) < Math.max(26, G.bh * 0.3)){
+    naChave = true; yAnterior = y; acumulado = 0; moveu = false; return;
+  }
+  const T = tampaQuad();
+  const naCaixa = x > G.x0 - 6 && x < G.x1 + 6 && y > Math.min(T.yf, G.yh) - 8 && y < G.yBase + 6;
+  if (naCaixa) mexerTampa(tampaAlvo === 0);
+});
+tela.addEventListener("pointermove", e => {
+  const [x, y] = ponto(e);
+  if (naChave){
+    acumulado += Math.abs(y - yAnterior); yAnterior = y;
+    if (acumulado > 22){ moveu = true; acumulado -= 22; darCorda(0.25); }
+    return;
+  }
+  const perto = Math.hypot(x - (G.chaveX + G.bh * 0.08), y - G.chaveY) < Math.max(26, G.bh * 0.3);
+  tela.style.cursor = perto ? "grab" : "pointer";
+});
+const soltar = () => { if (naChave && !moveu) darCorda(0.5); naChave = false; };
+tela.addEventListener("pointerup", soltar);
+tela.addEventListener("pointercancel", () => { naChave = false; });
+
+new ResizeObserver(medir).observe(tela);
+medir();
+requestAnimationFrame(quadro);
+})();
+</script>
+</body>
+</html>

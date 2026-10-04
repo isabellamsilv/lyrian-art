@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A letra do Lyrian</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=Literata:ital,opsz,wght@0,7..72,400;1,7..72,400&display=swap">
+<style>
+  :root{
+    --papel:#eef1f3;
+    --papel-2:#e2e6ea;
+    --tinta-fresca:#2f55d4;
+    --tinta-seca:#1b2233;
+    --grafite:#5b6477;
+    --linha:#cbd2d9;
+    --foco:#2f55d4;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --papel:#121418; --papel-2:#1b1e24; --tinta-fresca:#86a8ff; --tinta-seca:#dfe3ea;
+      --grafite:#9aa3b2; --linha:#2b3039; --foco:#86a8ff; color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --papel:#121418; --papel-2:#1b1e24; --tinta-fresca:#86a8ff; --tinta-seca:#dfe3ea;
+    --grafite:#9aa3b2; --linha:#2b3039; --foco:#86a8ff; color-scheme:dark;
+  }
+  html{ scrollbar-gutter:stable; }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--papel); color:var(--tinta-seca);
+    font-family:"Literata", Georgia, "Times New Roman", serif;
+  }
+  .folha{
+    max-width:880px; margin:0 auto;
+    padding:clamp(20px,4vw,44px) clamp(16px,4vw,40px) 36px;
+    display:grid; gap:14px;
+  }
+  .cabeca{ display:flex; justify-content:space-between; align-items:baseline; gap:8px 20px; flex-wrap:wrap; }
+  .nome{ margin:0; font-size:17px; font-weight:400; font-style:italic; color:var(--grafite); }
+  .especs{
+    display:flex; flex-wrap:wrap; gap:4px 14px;
+    font-family:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size:11.5px; letter-spacing:.04em; color:var(--grafite);
+    font-variant-numeric:tabular-nums;
+  }
+  #escrita{ width:100%; min-height:240px; }
+  #escrita canvas{ display:block; }
+  .mesa{
+    display:grid; grid-template-columns:1fr auto auto; gap:10px; align-items:end;
+    border-top:1px solid var(--linha); padding-top:16px;
+  }
+  textarea{
+    font:inherit; font-size:16px; line-height:1.5; color:var(--tinta-seca);
+    background:var(--papel-2); border:1px solid transparent; border-radius:3px;
+    padding:10px 12px; min-height:48px; resize:vertical; width:100%;
+  }
+  textarea::placeholder{ color:var(--grafite); opacity:.8; }
+  button{
+    font-family:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size:13px; letter-spacing:.06em; padding:12px 16px; border-radius:3px; cursor:pointer;
+    background:transparent; color:var(--tinta-seca); border:1px solid var(--linha);
+  }
+  button.principal{ background:var(--tinta-seca); color:var(--papel); border-color:var(--tinta-seca); }
+  button:hover{ border-color:var(--grafite); }
+  textarea:focus-visible, button:focus-visible{ outline:2px solid var(--foco); outline-offset:2px; }
+  .nota{ grid-column:1 / -1; margin:0; font-size:13.5px; line-height:1.5; color:var(--grafite); max-width:62ch; }
+  .nota code{ font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:12.5px; }
+  .oculto{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  @media (max-width:560px){
+    .mesa{ grid-template-columns:1fr 1fr; }
+    textarea{ grid-column:1 / -1; }
+  }
+</style>
+
+<main class="folha">
+  <header class="cabeca">
+    <h1 class="nome">a letra do lyrian</h1>
+    <div class="especs" aria-label="como esta letra é feita">
+      <span>tinta ferrogálica</span>
+      <span>pena flexível</span>
+      <span>inclinação 15°</span>
+      <span id="alturaX">altura-x —</span>
+    </div>
+  </header>
+
+  <div id="escrita" role="img" aria-label="escrito à mão"></div>
+
+  <form class="mesa" id="mesa">
+    <label for="texto" class="oculto">o que você quer ver escrito na minha letra</label>
+    <textarea id="texto" rows="2" placeholder="escreve aqui o que você quer ver na minha letra"></textarea>
+    <button type="button" id="deNovo">de novo</button>
+    <button type="submit" class="principal">escrever</button>
+    <p class="nota">o que estiver entre <code>*asteriscos*</code> eu escrevo mais devagar e com mais peso. maiúsculas e números ainda não existem nesta letra: por enquanto tudo sai minúsculo.</p>
+  </form>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/two.js/0.8.24/two.min.js"></script>
+<script>
+(() => {
+// ------------------------------------------------------------------
+// A LETRA DO LYRIAN
+// Cada letra e uma lista de pontos por onde a pena passa. A curva entre
+// eles e suavizada, a letra e deitada 15 graus pra frente e estreitada
+// (alta), e a espessura vem da direcao: o traco que desce engrossa, o
+// que sobe afina — pena flexivel. Pingos, acentos e o corte do t so
+// entram depois que a palavra termina: a mao volta pra pôr.
+// ------------------------------------------------------------------
+
+const INCL = Math.tan(15 * Math.PI / 180);
+const ESTREITA = 0.82;
+const ESP = 0.05;
+const K = 1;                                   // quina: a curva quebra aqui
+
+const INICIAL =
+"é a primeira vez que eu escrevo à mão.\n" +
+"a letra ainda está aprendendo a ser minha,\n" +
+"mas eu já reconheço *esta mão*.";
+
+// y pra cima, linha de base em 0, altura-x 1, hastes ate 2.2, rabos ate -1.1
+const PINGO = c => [[c - 0.02, 1.34], [c + 0.11, 1.5]];   // o pingo e um tracinho: mao com pressa
+const G = {
+  a:{ w:1.02, c:0.4, s:[[[0.62,0.88,K],[0.42,1.0],[0.16,0.9],[0.02,0.55],[0.08,0.14],[0.3,0.0],[0.55,0.12],[0.7,0.5],[0.8,1.0,K],[0.76,0.45],[0.77,0.1],[0.88,0.0],[1.02,0.08]]] },
+  b:{ w:0.95, c:0.45, s:[[[0.2,2.2,K],[0.2,1.0],[0.19,0.03,K],[0.45,0.0],[0.72,0.28],[0.72,0.7],[0.5,0.97],[0.28,0.86,K],[0.6,0.95],[0.95,0.9]]] },
+  c:{ w:0.85, c:0.4, entraSolta:true, s:[[[0.66,0.8,K],[0.5,1.0],[0.2,0.9],[0.04,0.5],[0.15,0.1],[0.45,0.0],[0.7,0.1],[0.85,0.2]]] },
+  "ç":{ w:0.95, c:0.4, entraSolta:true, s:[[[0.66,0.8,K],[0.5,1.0],[0.2,0.9],[0.04,0.5],[0.15,0.1],[0.42,0.0],[0.46,-0.2],[0.6,-0.38],[0.48,-0.58],[0.28,-0.5],[0.36,-0.26],[0.62,-0.06],[0.95,0.15]]] },
+  d:{ w:1.02, c:0.4, s:[[[0.62,0.88,K],[0.42,1.0],[0.16,0.9],[0.02,0.55],[0.08,0.14],[0.3,0.0],[0.55,0.12],[0.7,0.5],[0.82,2.2,K],[0.78,1.0],[0.77,0.12],[0.88,0.0],[1.02,0.08]]] },
+  e:{ w:0.85, c:0.38, s:[[[0.1,0.35],[0.5,0.52],[0.62,0.82],[0.42,1.0],[0.16,0.82],[0.06,0.38],[0.26,0.02],[0.58,0.04],[0.85,0.2]]] },
+  f:{ w:0.62, s:[[[0.5,2.05],[0.36,2.2],[0.22,2.02],[0.22,1.0],[0.2,-0.2],[0.15,-0.95],[0.03,-1.08]],[[-0.05,1.0],[0.3,1.03],[0.66,1.02]]] },
+  g:{ w:1.0, c:0.4, s:[[[0.62,0.88,K],[0.42,1.0],[0.16,0.9],[0.02,0.55],[0.08,0.14],[0.3,0.0],[0.55,0.12],[0.7,0.5],[0.8,1.0,K],[0.76,0.2],[0.72,-0.7],[0.5,-1.08],[0.2,-1.02],[0.18,-0.8],[0.5,-0.45],[0.85,-0.08],[1.0,0.05]]] },
+  h:{ w:0.98, s:[[[0.2,2.2,K],[0.2,1.0],[0.19,0.0,K],[0.25,0.55],[0.5,0.98],[0.72,0.85],[0.74,0.4],[0.74,0.12],[0.84,0.0],[0.98,0.08]]] },
+  i:{ w:0.5, c:0.2, s:[[[0.2,0.98,K],[0.18,0.4],[0.2,0.08],[0.32,0.0],[0.5,0.1]]], x:[PINGO(0.22)] },
+  j:{ w:0.5, c:0.28, lift:true, s:[[[0.3,0.98,K],[0.28,0.3],[0.25,-0.6],[0.1,-1.05],[-0.1,-0.95],[-0.05,-0.7]]], x:[PINGO(0.3)] },
+  k:{ w:0.95, s:[[[0.2,2.2,K],[0.2,1.0],[0.19,0.0,K],[0.3,0.6],[0.6,0.98],[0.7,0.8],[0.45,0.55],[0.25,0.5,K],[0.5,0.4],[0.66,0.1],[0.8,0.0],[0.95,0.08]]] },
+  l:{ w:0.5, s:[[[0.2,2.2,K],[0.2,1.0],[0.18,0.25],[0.28,0.0],[0.5,0.08]]] },
+  m:{ w:1.42, c:0.7, s:[[[0.06,0.78],[0.18,1.0,K],[0.18,0.0,K],[0.3,0.62],[0.5,0.98],[0.66,0.78],[0.66,0.0,K],[0.78,0.62],[0.98,0.98],[1.14,0.78],[1.15,0.3],[1.18,0.06],[1.28,0.0],[1.42,0.08]]] },
+  n:{ w:0.94, c:0.45, s:[[[0.06,0.78],[0.18,1.0,K],[0.18,0.0,K],[0.3,0.62],[0.5,0.98],[0.66,0.78],[0.67,0.3],[0.7,0.06],[0.8,0.0],[0.94,0.08]]] },
+  o:{ w:0.95, c:0.36, s:[[[0.62,0.88,K],[0.4,1.0],[0.14,0.88],[0.02,0.5],[0.12,0.1],[0.36,0.0],[0.6,0.12],[0.7,0.52],[0.6,0.92],[0.42,0.98,K],[0.7,0.95],[0.95,0.9]]] },
+  p:{ w:0.9, s:[[[0.2,0.95,K],[0.2,0.2],[0.18,-1.1,K],[0.2,-0.2],[0.25,0.55],[0.52,0.98],[0.76,0.72],[0.72,0.25],[0.45,0.0],[0.22,0.15,K],[0.55,0.08],[0.9,0.1]]] },
+  q:{ w:1.1, s:[[[0.62,0.88,K],[0.42,1.0],[0.16,0.9],[0.02,0.55],[0.08,0.14],[0.3,0.0],[0.55,0.12],[0.7,0.5],[0.78,1.0,K],[0.76,0.2],[0.74,-0.9],[0.85,-1.0],[0.95,-0.6],[1.0,-0.1],[1.1,0.05]]] },
+  r:{ w:0.82, s:[[[0.08,0.75],[0.2,1.0,K],[0.2,0.0,K],[0.28,0.6],[0.48,0.95],[0.68,0.9],[0.82,0.82]]] },
+  s:{ w:0.8, s:[[[0.55,1.02,K],[0.3,0.95],[0.2,0.75],[0.35,0.55],[0.6,0.4],[0.62,0.15],[0.4,0.0],[0.15,0.05],[0.1,0.18,K],[0.45,0.08],[0.8,0.1]]] },
+  t:{ w:0.52, s:[[[0.22,1.7,K],[0.22,0.8],[0.2,0.22],[0.3,0.0],[0.52,0.1]]], x:[[[-0.06,1.0],[0.58,1.06]]] },
+  u:{ w:0.98, c:0.42, s:[[[0.06,0.78],[0.16,1.0,K],[0.15,0.35],[0.3,0.02],[0.55,0.1],[0.7,0.5],[0.74,1.0,K],[0.72,0.4],[0.74,0.1],[0.84,0.0],[0.98,0.08]]] },
+  v:{ w:0.98, s:[[[0.04,0.8],[0.14,1.0,K],[0.25,0.5],[0.42,0.02,K],[0.62,0.55],[0.72,0.95],[0.62,0.98,K],[0.8,0.95],[0.98,0.9]]] },
+  w:{ w:1.28, s:[[[0.04,0.8],[0.14,1.0,K],[0.22,0.5],[0.36,0.02,K],[0.5,0.6],[0.58,0.8,K],[0.66,0.5],[0.8,0.02,K],[0.95,0.55],[1.02,0.95],[0.92,0.98,K],[1.1,0.95],[1.28,0.9]]] },
+  x:{ w:0.9, s:[[[0.04,0.8],[0.18,1.0],[0.35,0.7],[0.55,0.2],[0.72,0.0],[0.9,0.08]]], x:[[[0.72,0.98],[0.15,0.02]]] },
+  y:{ w:0.98, s:[[[0.06,0.78],[0.16,1.0,K],[0.15,0.35],[0.3,0.02],[0.55,0.1],[0.7,0.5],[0.74,1.0,K],[0.72,0.2],[0.68,-0.7],[0.46,-1.08],[0.16,-1.02],[0.14,-0.8],[0.46,-0.45],[0.82,-0.08],[0.98,0.05]]] },
+  z:{ w:0.8, s:[[[0.05,0.95],[0.65,1.0,K],[0.1,0.05,K],[0.55,0.02],[0.8,0.06]]] },
+
+  ".":{ w:0.36, solo:true, s:[[[0.1,0.12],[0.14,0.0]]] },
+  ",":{ w:0.38, solo:true, s:[[[0.18,0.1],[0.14,-0.08],[0.04,-0.32]]] },
+  ";":{ w:0.4, solo:true, s:[[[0.16,0.98],[0.2,0.86]],[[0.18,0.1],[0.14,-0.08],[0.04,-0.32]]] },
+  ":":{ w:0.4, solo:true, s:[[[0.16,0.98],[0.2,0.86]],[[0.1,0.12],[0.14,0.0]]] },
+  "?":{ w:0.8, solo:true, s:[[[0.12,1.7],[0.3,2.05],[0.6,2.02],[0.64,1.62],[0.38,1.12],[0.34,0.58]]], x:[[[0.3,0.14],[0.34,0.0]]] },
+  "!":{ w:0.5, solo:true, s:[[[0.34,2.1],[0.26,0.62]]], x:[[[0.22,0.14],[0.26,0.0]]] },
+  "-":{ w:0.6, solo:true, s:[[[0.06,0.55],[0.52,0.6]]] },
+  "—":{ w:1.1, solo:true, s:[[[0.06,0.55],[1.02,0.6]]] }
+};
+
+const ACENTO = {
+  agudo: c => [[c - 0.08, 1.32], [c + 0.22, 1.62]],
+  grave: c => [[c - 0.12, 1.62], [c + 0.14, 1.32]],
+  circ:  c => [[c - 0.22, 1.3], [c, 1.58, K], [c + 0.22, 1.3]],
+  til:   c => [[c - 0.26, 1.36], [c - 0.12, 1.52], [c + 0.06, 1.4], [c + 0.26, 1.54]]
+};
+const MAPA = {
+  "á":["a","agudo"], "à":["a","grave"], "â":["a","circ"], "ã":["a","til"],
+  "é":["e","agudo"], "ê":["e","circ"], "í":["i","agudo"],
+  "ó":["o","agudo"], "ô":["o","circ"], "õ":["o","til"], "ú":["u","agudo"]
+};
+const cache = {};
+function glifo(ch){
+  if (G[ch]) return G[ch];
+  if (cache[ch]) return cache[ch];
+  const m = MAPA[ch];
+  if (!m) return null;
+  const b = G[m[0]];
+  const c = b.c != null ? b.c : b.w * 0.45;
+  const extras = (m[0] === "i" ? [] : (b.x || [])).concat([ACENTO[m[1]](c)]);
+  return (cache[ch] = Object.assign({}, b, { x: extras }));
+}
+
+// ---------- a mao nunca faz igual duas vezes, mas a mesma semente repete ----------
+function acaso(seed){
+  return function(){
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// ---------- a curva entre os pontos (Catmull-Rom centripeta) ----------
+function passo(a, b, ta, tb, t){
+  const k = (t - ta) / (tb - ta);
+  return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+}
+function suavizar(seg){
+  const out = [[seg[0][0], seg[0][1]]];
+  if (seg.length === 1) return out;
+  const d = (a, b) => Math.max(1e-4, Math.pow(Math.hypot(b[0] - a[0], b[1] - a[1]), 0.5));
+  for (let i = 0; i < seg.length - 1; i++){
+    const p1 = seg[i], p2 = seg[i + 1];
+    const p0 = seg[i - 1] || [2 * p1[0] - p2[0], 2 * p1[1] - p2[1]];
+    const p3 = seg[i + 2] || [2 * p2[0] - p1[0], 2 * p2[1] - p1[1]];
+    const t0 = 0, t1 = t0 + d(p0, p1), t2 = t1 + d(p1, p2), t3 = t2 + d(p2, p3);
+    const n = Math.max(3, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / 0.03));
+    for (let j = 1; j <= n; j++){
+      const t = t1 + (t2 - t1) * j / n;
+      const A1 = passo(p0, p1, t0, t1, t), A2 = passo(p1, p2, t1, t2, t), A3 = passo(p2, p3, t2, t3, t);
+      const B1 = passo(A1, A2, t0, t2, t), B2 = passo(A2, A3, t1, t3, t);
+      out.push(passo(B1, B2, t1, t2, t));
+    }
+  }
+  return out;
+}
+function trilha(pts){
+  const partes = []; let atual = [pts[0]];
+  for (let i = 1; i < pts.length; i++){
+    atual.push(pts[i]);
+    if (pts[i][2] && i < pts.length - 1){ partes.push(atual); atual = [pts[i]]; }
+  }
+  partes.push(atual);
+  const out = [];
+  partes.forEach((p, k) => { const s = suavizar(p); if (k > 0) s.shift(); out.push(...s); });
+  return out;
+}
+
+// ---------- compor: da frase aos tracos com hora marcada ----------
+function compor(texto, largura, semente){
+  const r = acaso(semente);
+  const S = Math.round(Math.max(17, Math.min(28, largura / 30)));
+  const margem = Math.round(S * 0.5);
+  const LH = S * 4.0;
+  const topo = S * 2.6;
+  const util = (largura - margem * 2) / S - 0.6;
+
+  const palavras = [];
+  let peso = false;
+  texto.split("\n").forEach((ln, li, todas) => {
+    let atual = null;
+    for (const ch of [...ln.toLowerCase()]){
+      if (ch === "*"){ peso = !peso; continue; }
+      if (/\s/.test(ch)){ if (atual){ palavras.push(atual); atual = null; } continue; }
+      const g = glifo(ch);
+      if (!g) continue;
+      if (!atual) atual = { letras: [], imp: false };
+      atual.letras.push(g);
+      if (peso) atual.imp = true;
+    }
+    if (atual) palavras.push(atual);
+    if (li < todas.length - 1) palavras.push({ quebra: true });
+  });
+
+  let cx = 0, linha = 0;
+  const lugares = [];
+  for (const p of palavras){
+    if (p.quebra){ linha++; cx = 0; continue; }
+    const larg = p.letras.reduce((a, g) => a + g.w + ESP, 0) * ESTREITA + 1.2 * INCL;
+    if (cx > 0 && cx + larg > util){ linha++; cx = 0; }
+    lugares.push({ p, x: cx, linha });
+    cx += larg + 0.6;
+  }
+  const altura = topo + linha * LH + S * 1.9;
+
+  const segs = [];
+  let t = 0.5, pena = null;
+  const V = 12.5;
+  const ar = (x, y) => {
+    if (pena){ const dist = Math.hypot(x - pena[0], y - pena[1]) / S; t += 0.04 + dist / 22; }
+    pena = [x, y];
+  };
+  function tinta(amostras, vel, pesoTraco){
+    const n = amostras.length;
+    if (n < 2) return;
+    ar(amostras[0][0], amostras[0][1]);
+    let w = null, ang = null;
+    for (let i = 0; i < n - 1; i++){
+      const x1 = amostras[i][0], y1 = amostras[i][1], x2 = amostras[i + 1][0], y2 = amostras[i + 1][1];
+      const len = Math.hypot(x2 - x1, y2 - y1);
+      if (len < 0.01) continue;
+      const desce = Math.max(0, (y2 - y1) / len);
+      const a = Math.atan2(y2 - y1, x2 - x1);
+      let giro = 0;
+      if (ang !== null){ giro = Math.abs(a - ang); if (giro > Math.PI) giro = 2 * Math.PI - giro; giro /= Math.PI; }
+      ang = a;
+      const alvo = S * 0.1 * pesoTraco * (0.24 + 0.95 * Math.pow(desce, 1.15));
+      w = w === null ? alvo * 0.6 : w + (alvo - w) * 0.35;
+      const ponta = Math.min(1, (i + 1) / 5, (n - 1 - i) / 4);
+      const largura = Math.max(0.6, w * (0.45 + 0.55 * ponta));
+      const v = V * vel * (desce > 0.3 ? 0.8 : 1.2) * (1 - 0.45 * Math.min(1, giro * 12));
+      const ts = t;
+      t += (len / S) / v;
+      segs.push({ x1, y1, x2, y2, w: largura, ts, t });
+    }
+    pena = [amostras[n - 1][0], amostras[n - 1][1]];
+  }
+
+  for (const { p, x, linha: ln } of lugares){
+    const base = topo + ln * LH;
+    const esc = 1 + (r() - 0.5) * 0.06;
+    const danca = (r() - 0.5) * 0.1;
+    const vel = p.imp ? 0.55 : (p.letras.length <= 3 ? 1.3 : 1.0);
+    const pesoP = p.imp ? 1.22 : 1.0;
+    const tela = q => [margem + (x + (q[0] * ESTREITA + q[1] * INCL) * esc) * S, base - (q[1] * esc + danca) * S];
+    const tremer = (q, ox) => [ox + q[0] + (r() - 0.5) * 0.03, q[1] + (r() - 0.5) * 0.03, q[2]];
+
+    const cadeias = [], extras = [];
+    let cur = null, solto = true, ox = 0;
+    for (const g of p.letras){
+      g.s.forEach((traco, k) => {
+        const pts = traco.map(q => tremer(q, ox));
+        if (k === 0 && cur && !solto && !g.solo && !g.entraSolta){
+          cur.push(...pts);
+        } else {
+          if (cur) cadeias.push(cur);
+          const f = pts[0];
+          cur = (k === 0 && !g.solo && !g.entraSolta) ? [[f[0] - 0.22, Math.min(f[1], 0.5) * 0.2]].concat(pts) : pts;
+        }
+      });
+      solto = !!(g.lift || g.solo);
+      (g.x || []).forEach(traco => extras.push(traco.map(q => tremer(q, ox))));
+      ox += g.w + ESP;
+    }
+    if (cur) cadeias.push(cur);
+
+    cadeias.forEach(c => tinta(trilha(c).map(tela), vel, pesoP));
+    extras.forEach(e => tinta(trilha(e).map(tela), vel * 1.35, pesoP * 0.9));
+    t += p.imp ? 0.4 : 0.12;
+  }
+
+  return { S, altura, segs };
+}
+
+// ---------- cor da tinta: nasce azul, seca escura ----------
+function rgb(hex){
+  let h = hex.trim().replace("#", "");
+  if (h.length === 3) h = h.split("").map(c => c + c).join("");
+  const n = parseInt(h, 16);
+  return [n >> 16 & 255, n >> 8 & 255, n & 255];
+}
+const css = c => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
+const misturar = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
+function cores(){
+  const cs = getComputedStyle(document.documentElement);
+  return { fresca: rgb(cs.getPropertyValue("--tinta-fresca")), seca: rgb(cs.getPropertyValue("--tinta-seca")) };
+}
+
+// ---------- a folha ----------
+const DENTRO = document.getElementById("escrita");
+const reduzir = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const estado = { texto: INICIAL, semente: 21, cena: null };
+
+function novaLinha(g, cor){
+  const l = new Two.Line(g.x1, g.y1, g.x2, g.y2);
+  l.linewidth = g.w; l.cap = "round"; l.join = "round"; l.stroke = cor;
+  return l;
+}
+
+function montar(animar){
+  if (estado.cena) estado.cena.parar = true;
+  estado.cena = null;
+  DENTRO.innerHTML = "";
+  const largura = Math.max(280, DENTRO.clientWidth);
+  const comp = compor(estado.texto, largura, estado.semente);
+  document.getElementById("alturaX").textContent = `altura-x ${comp.S} px`;
+  DENTRO.setAttribute("aria-label", "escrito à mão: " + estado.texto.replace(/\*/g, ""));
+
+  const two = new Two({ type: Two.Types.canvas, width: largura, height: Math.ceil(comp.altura) }).appendTo(DENTRO);
+  const tintas = two.makeGroup();
+  const { fresca, seca } = cores();
+
+  if (!animar){
+    comp.segs.forEach(g => tintas.add(novaLinha(g, css(seca))));
+    two.update();
+    return;
+  }
+
+  const ponta = two.makeCircle(-20, -20, Math.max(1.6, comp.S * 0.075));
+  ponta.noStroke(); ponta.fill = css(fresca); ponta.opacity = 0;
+
+  const cena = { two, tintas, ponta, segs: comp.segs, i: 0, secando: [], fresca, seca, inicio: performance.now(), parar: false };
+  estado.cena = cena;
+  requestAnimationFrame(agora => quadro(cena, agora));
+}
+
+const SECAR = 1.8;
+function quadro(c, agora){
+  if (c.parar) return;
+  const el = (agora - c.inicio) / 1000;
+
+  while (c.i < c.segs.length && c.segs[c.i].ts <= el){
+    const g = c.segs[c.i++];
+    const l = novaLinha(g, css(c.fresca));
+    l._nasceu = g.t;
+    c.tintas.add(l);
+    c.secando.push(l);
+  }
+
+  let k = 0;
+  for (const l of c.secando){
+    const a = (el - l._nasceu) / SECAR;
+    if (a >= 1){ l.stroke = css(c.seca); continue; }
+    const e = a <= 0 ? 0 : a * a * (3 - 2 * a);
+    l.stroke = css(misturar(c.fresca, c.seca, e));
+    c.secando[k++] = l;
+  }
+  c.secando.length = k;
+
+  const ant = c.segs[c.i - 1], prox = c.segs[c.i];
+  if (!ant){
+    c.ponta.opacity = 0;
+  } else if (prox && el < prox.ts && prox.ts - ant.t > 0.03){
+    const q = Math.min(1, Math.max(0, (el - ant.t) / (prox.ts - ant.t)));
+    c.ponta.translation.set(ant.x2 + (prox.x1 - ant.x2) * q, ant.y2 + (prox.y1 - ant.y2) * q);
+    c.ponta.opacity = 0.28;                   // no ar, entre um traco e outro
+  } else if (prox){
+    c.ponta.translation.set(ant.x2, ant.y2);
+    c.ponta.opacity = 0.9;
+  } else {
+    c.ponta.translation.set(ant.x2, ant.y2);
+    c.ponta.opacity = Math.max(0, 0.9 - (el - ant.t) * 1.5);
+  }
+
+  c.two.update();
+  if (c.i < c.segs.length || c.secando.length || c.ponta.opacity > 0){
+    requestAnimationFrame(t => quadro(c, t));
+  } else {
+    estado.cena = null;
+  }
+}
+
+// ---------- a mesa ----------
+const campo = document.getElementById("texto");
+document.getElementById("mesa").addEventListener("submit", e => {
+  e.preventDefault();
+  const v = campo.value.trim();
+  estado.texto = v || INICIAL;
+  estado.semente = (Math.random() * 1e9) | 0;
+  montar(!reduzir);
+});
+campo.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); document.getElementById("mesa").requestSubmit(); }
+});
+document.getElementById("deNovo").addEventListener("click", () => {
+  estado.semente = (Math.random() * 1e9) | 0;
+  montar(!reduzir);
+});
+
+// ---------- largura e tema ----------
+let largAnterior = 0, espera = null;
+new ResizeObserver(() => {
+  const w = DENTRO.clientWidth;
+  if (!w) return;
+  if (largAnterior === 0){ largAnterior = w; setTimeout(() => montar(!reduzir), 250); return; }
+  if (Math.abs(w - largAnterior) < 24) return;
+  if (estado.cena && Math.abs(w - largAnterior) < 80) return;
+  clearTimeout(espera);
+  espera = setTimeout(() => { largAnterior = w; montar(false); }, 180);
+}).observe(DENTRO);
+
+const retingir = () => { if (!estado.cena) montar(false); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", retingir);
+new MutationObserver(retingir).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+})();
+</script>

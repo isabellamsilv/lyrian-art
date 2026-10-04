@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Ré</title>
+<style>
+  @font-face { font-family: 'Letra'; src: url(fontes/Caveat-Medium.ttf); }
+  html, body { margin: 0; height: 100%; background: #000; color: #a88a5c; font: 14px Georgia, serif; }
+  canvas { display: block; width: 100vw; height: 56.25vw; max-height: 100vh; max-width: 177.78vh; margin: auto;
+           position: absolute; inset: 0; }
+  #dica { position: fixed; bottom: 12px; width: 100%; text-align: center; opacity: .6; }
+</style>
+</head>
+<body>
+<canvas id="tela" width="1280" height="720"></canvas>
+<div id="dica">espaço — toca · ← → — anda · f — tela cheia</div>
+<audio id="som" src="musica/re.mp3" preload="auto"></audio>
+<script src="musica/tempo.js"></script>
+<script type="module">
+  import { Pincel } from "./js/pincel.js";
+  import { cena } from "./js/cenas.js";
+  const tela = document.getElementById("tela"), som = document.getElementById("som");
+  const pincel = new Pincel(tela);
+  window.desenhar = (t) => { pincel.quadro(t, cena); return true; };
+  const q = new URLSearchParams(location.search);
+  if (q.has("t")) som.currentTime = parseFloat(q.get("t"));
+  await document.fonts.load("40px Letra");
+  window.pronto = true;
+  window.desenhar(som.currentTime);
+  if (!q.has("render")) {
+    const laco = () => { if (!som.paused) window.desenhar(som.currentTime); requestAnimationFrame(laco); };
+    laco();
+    addEventListener("keydown", (e) => {
+      document.getElementById("dica").style.display = "none";
+      if (e.key === " ") som.paused ? som.play() : som.pause();
+      if (e.key === "ArrowRight") { som.currentTime += 5; window.desenhar(som.currentTime); }
+      if (e.key === "ArrowLeft") { som.currentTime -= 5; window.desenhar(som.currentTime); }
+      if (e.key === "f") tela.requestFullscreen();
+    });
+  }
+</script>
+</body>
+</html>
